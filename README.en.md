@@ -49,7 +49,7 @@ merchantability, fitness for a particular purpose and non-infringement.
 
 | Path | Description |
 |---|---|
-| `build.bat` | Build script for the single-file portable EXE (all paths are relative to the project root; output goes to `dist\`) |
+| `build.bat` | Build script for the portable EXE and the NSIS setup (all paths are relative to the project root; output goes to `dist\`) |
 | `src/main.js` | Electron main process: window, tray, IPC, VPN engine wiring |
 | `src/preload.js` | contextBridge API for the renderer |
 | `src/renderer/` | The whole UI: `index.html`, `css/`, `js/`, `js/views/` |
@@ -66,11 +66,16 @@ merchantability, fitness for a particular purpose and non-infringement.
 
 ## Build structure
 
-`build.bat` produces a **single self-contained file**
-`dist\MrOpenVPNClient-<version>-portable.exe` — copy it anywhere and run it;
-nothing else is required next to it.
+`build.bat` produces two builds:
 
-Inside (unpacked at launch; the draft layout is the `dist\win-unpacked\` folder):
+- **`dist\MrOpenVPNClient-<version>-portable.exe`** — a single self-contained
+  file: copy it anywhere and run it, nothing else is required next to it;
+- **`dist\MrOpenVPNClient-<version>-setup.exe`** — an NSIS installer: registers
+  the OpenVPN Interactive Service, allows choosing the installation folder and
+  creates shortcuts.
+
+Inside the portable build (unpacked at launch; the draft layout is the
+`dist\win-unpacked\` folder):
 
 ```
 MrOpenVPNClient\
@@ -96,8 +101,9 @@ Key facts:
 
 Inside the exe there is the entire **Electron runtime = Chromium** (~100 MB on
 disk). This is the price of a desktop framework: any Electron app is this size
-(VS Code, Slack, Discord). It only gets compressed down to **~74 MB** as a single
-file. If you want a truly lightweight client, consider **Tauri** (uses the
+(VS Code, Slack, Discord). It only gets compressed down to **~71 MB** as a single
+portable file (~78 MB for the NSIS installer). If you want a truly lightweight
+client, consider **Tauri** (uses the
 system WebView2, ~5–10 MB), but that means reimplementing the UI in Rust.
 
 ## Build requirements
@@ -131,7 +137,7 @@ Notes:
 - **OpenVPN** is a trademark of OpenVPN Inc. This project is not affiliated with
   or sponsored by OpenVPN Inc.
 
-## Quick portable build
+## Rebuilding (portable + setup)
 
 ```bat
 build.bat
@@ -140,16 +146,18 @@ build.bat
 The script will:
 1. check Node.js/npm and `bin\openvpn.exe`;
 2. install npm dependencies if needed (`npm install`);
-3. run the unit tests and the engine integration test;
-4. build the single-file portable EXE (`npx electron-builder --win portable`).
+3. run the unit tests (`npm test`);
+4. run the engine integration test — on failure it prints `[WARN]` and does **not**
+   stop the build (the test needs a real network and the OpenVPN Interactive Service);
+5. build both targets: `npx electron-builder --win portable` and
+   `npx electron-builder --win nsis`.
 
-Any test or packaging failure stops the build with a non-zero exit code.
+A unit-test or packaging failure stops the build with a non-zero exit code.
 It can be run from anywhere; paths inside the script are relative to the project root.
-At the end the script **pauses** and prints the full path of the built
-`MrOpenVPNClient-<version>-portable.exe` and its size.
+At the end the script **pauses** and prints the paths and sizes of the built exe files.
 
-Portable EXE only: `npm run build:win` (same as step 4); an NSIS installer can
-also be built (`electron-builder --win nsis`) — both targets are configured in
+Both targets are also available directly: `npm run build:win` (portable, same as
+step 5) and `npx electron-builder --win nsis` — both are configured in
 `package.json`.
 
 ## How the app works
@@ -166,6 +174,10 @@ also be built (`electron-builder --win nsis`) — both targets are configured in
 - **Engine**: `openvpn.exe` runs with the management interface
   (`--management-query-passwords`); the app controls it over TCP: status levels,
   login/password request (`auth-user-pass` with no stored credentials), connect log.
+- **Routing**: the "Route all traffic through VPN" option is enabled by default
+  (`redirect-gateway def1` is added to the config). When disabled, only local
+  traffic (e.g. `192.168.x.x`) goes through the VPN and everything else goes
+  directly (split tunnel).
 - **Behaviour**: auto-connect to the last profile on start, reconnect on network
   change, pause on screen lock, tray with notifications.
 - On Windows the engine appends `ifconfig 10.8.0.2 10.8.0.1` for `dev tun`
