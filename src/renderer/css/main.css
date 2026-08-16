@@ -423,6 +423,7 @@ button {
   margin-top: 8px;
   background: var(--surface-container);
   border-radius: var(--card-radius);
+  border: 1px solid var(--outline-variant);
   overflow: hidden;
 }
 
@@ -450,6 +451,7 @@ button {
 .settings-divider {
   height: 1px;
   background: var(--outline-variant);
+  margin: 0 8px 0 16px;
 }
 
 .row-chevron {
