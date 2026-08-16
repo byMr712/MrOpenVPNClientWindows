@@ -40,12 +40,6 @@ const Dialogs = {
       title,
       buttons: [
         {
-          label: i18n.t('cancel'),
-          onClick: () => {
-            this.credentialsOpen = false;
-          }
-        },
-        {
           label: i18n.t('connect'),
           onClick: () => {
             this.credentialsOpen = false;
@@ -55,6 +49,12 @@ const Dialogs = {
               passwordInput.value,
               !!rememberBox
             );
+          }
+        },
+        {
+          label: i18n.t('cancel'),
+          onClick: () => {
+            this.credentialsOpen = false;
           }
         }
       ]
@@ -86,14 +86,14 @@ const Dialogs = {
       const dlg = UI.showDialog({
         title: i18n.t('log'),
         buttons: [
-          { label: i18n.t('close'), onClick: () => {} },
           {
             label: i18n.t('copy_log'),
             onClick: () => {
               window.api.copyText(log ? log.join('\n') : '');
               UI.showToast(i18n.t('copied_log'));
             }
-          }
+          },
+          { label: i18n.t('close'), onClick: () => {} }
         ]
       });
       const body = dlg.el.querySelector('.dialog-msg');

@@ -288,21 +288,6 @@ button {
   filter: brightness(0.9);
 }
 
-.btn-text {
-  border: none;
-  background: transparent;
-  color: var(--accent, var(--on-surface));
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: inherit;
-  text-transform: uppercase;
-  padding: 10px 12px;
-  border-radius: 20px;
-}
-.btn-text:hover {
-  background: color-mix(in srgb, var(--accent, var(--on-surface)) 10%, transparent);
-}
-
 /* ---- switch ---- */
 
 .switch {
@@ -746,12 +731,21 @@ button {
 }
 .dialog-buttons {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+  gap: 12px;
   margin-top: 24px;
+}
+.dialog-buttons .btn-outlined {
+  flex: 1;
+  width: auto;
+  min-width: 0;
 }
 .dialog-buttons.center {
   justify-content: center;
+}
+.dialog-buttons.center .btn-outlined {
+  flex: none;
+  width: auto;
+  padding: 10px 24px;
 }
 
 /* ---- toast ---- */

@@ -128,8 +128,8 @@ function confirmDebugMode(sw) {
   UI.showDialog({
     message: i18n.t('debug_mode_confirm_message'),
     buttons: [
-      { label: i18n.t('cancel'), onClick: () => sw.setState(false) },
-      { label: i18n.t('enable'), onClick: () => window.api.setSettings({ debugMode: true }) }
+      { label: i18n.t('enable'), onClick: () => window.api.setSettings({ debugMode: true }) },
+      { label: i18n.t('cancel'), onClick: () => sw.setState(false) }
     ]
   });
 }
@@ -139,8 +139,8 @@ function confirmClearUsers() {
     title: i18n.t('clear_users'),
     message: i18n.t('clear_users_confirm'),
     buttons: [
-      { label: i18n.t('close'), onClick: () => {} },
-      { label: i18n.t('delete'), danger: true, onClick: () => window.api.clearUsers() }
+      { label: i18n.t('delete'), onClick: () => window.api.clearUsers() },
+      { label: i18n.t('close'), onClick: () => {} }
     ]
   });
 }
@@ -150,8 +150,8 @@ function confirmResetData() {
     title: i18n.t('reset_data'),
     message: i18n.t('reset_data_confirm'),
     buttons: [
-      { label: i18n.t('close'), onClick: () => {} },
-      { label: i18n.t('delete'), danger: true, onClick: () => window.api.resetData() }
+      { label: i18n.t('delete'), onClick: () => window.api.resetData() },
+      { label: i18n.t('close'), onClick: () => {} }
     ]
   });
 }

@@ -73,7 +73,7 @@ const UI = {
     dialog.addEventListener('mousedown', (e) => e.stopPropagation());
 
     for (const b of buttons || []) {
-      const btn = UI.h('button', { class: 'btn-text' + (b.danger ? ' danger' : ''), onclick: () => {
+      const btn = UI.h('button', { class: 'btn-outlined', onclick: () => {
         close();
         if (b.onClick) b.onClick();
       } }, b.label);
