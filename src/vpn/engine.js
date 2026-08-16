@@ -132,12 +132,7 @@ class VpnEngine extends EventEmitter {
 
     const withAdmin = () => {
       this._connectAttempt = profile.id;
-      try {
-        this.spawnOpenVpn(openvpn, profile);
-        return Promise.resolve();
-      } catch (e) {
-        return Promise.reject(e);
-      }
+      return this.spawnOpenVpn(openvpn, profile);
     };
 
     return this.isAdmin().then((admin) => {
@@ -151,11 +146,11 @@ class VpnEngine extends EventEmitter {
     });
   }
 
-  spawnOpenVpn(openvpn, profile) {
+  async spawnOpenVpn(openvpn, profile) {
     this.log('MrOpenVPN Windows Client starting');
     this.setLevel(LEVEL_START, profile.id);
 
-    const port = this.freePort();
+    const port = await this.freePort();
     this.tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mropenvpn-'));
     const cfgPath = path.join(this.tempDir, 'client.ovpn');
     let configText = profile.config || '';
@@ -230,30 +225,28 @@ class VpnEngine extends EventEmitter {
     });
   }
 
-  connectManagement(portPromise) {
-    portPromise.then((port) => {
-      // openvpn needs a moment to start listening.
-      const tryConnect = (attempt) => {
-        const sock = netMod.connect({ port, host: '127.0.0.1' });
-        sock.setNoDelay(true);
-        const onError = (err) => {
-          sock.removeAllListeners();
-          sock.destroy();
-          if (attempt < 40) {
-            setTimeout(() => tryConnect(attempt + 1), 250);
-          } else {
-            this.log('Could not connect to the OpenVPN management interface');
-            this.setLevel(LEVEL_UNKNOWN, this.profileUuid);
-          }
-        };
-        sock.once('error', onError);
-        sock.once('connect', () => {
-          sock.removeListener('error', onError);
-          this.attachManagement(sock);
-        });
+  connectManagement(port) {
+    // openvpn needs a moment to start listening.
+    const tryConnect = (attempt) => {
+      const sock = netMod.connect({ port, host: '127.0.0.1' });
+      sock.setNoDelay(true);
+      const onError = (err) => {
+        sock.removeAllListeners();
+        sock.destroy();
+        if (attempt < 40) {
+          setTimeout(() => tryConnect(attempt + 1), 250);
+        } else {
+          this.log('Could not connect to the OpenVPN management interface');
+          this.setLevel(LEVEL_UNKNOWN, this.profileUuid);
+        }
       };
-      tryConnect(0);
-    });
+      sock.once('error', onError);
+      sock.once('connect', () => {
+        sock.removeListener('error', onError);
+        this.attachManagement(sock);
+      });
+    };
+    tryConnect(0);
   }
 
   attachManagement(sock) {
@@ -378,6 +371,7 @@ class VpnEngine extends EventEmitter {
       this.pendingCreds = null;
       return;
     }
+    this.setLevel(LEVEL_WAITING_FOR_USER_INPUT, this.profileUuid);
     this.emit('need-password', { profileId: this.profileUuid, kind });
   }
 
@@ -416,6 +410,9 @@ class VpnEngine extends EventEmitter {
     const safeUser = String(username).replace(/"/g, '\\"');
     const safePass = String(password).replace(/"/g, '\\"');
     this.send(`password auth "${safeUser}" "${safePass}"`);
+    if (this.level === LEVEL_WAITING_FOR_USER_INPUT) {
+      this.setLevel(LEVEL_CONNECTING_NO_SERVER_REPLY_YET, this.profileUuid);
+    }
     this.log('Sending credentials to the OpenVPN server');
   }
 

@@ -28,6 +28,11 @@ function stripComment(line) {
   return line;
 }
 
+function normProto(val) {
+  const m = /^(udp|tcp)[46]?(?:-(?:client|server))?$/.exec(String(val).toLowerCase().trim());
+  return m ? m[1] : null;
+}
+
 function parseConfig(text) {
   const lines = String(text).split(/\r?\n/);
   const out = [];
@@ -37,6 +42,7 @@ function parseConfig(text) {
   let remote = null;
   let proto = null;
   let port = null;
+  let hasIfconfig = false;
 
   for (let raw of lines) {
     const line = raw.trimEnd();
@@ -64,6 +70,8 @@ function parseConfig(text) {
       const val = (parts[1] || '').toLowerCase();
       if (val === 'tap') devType = 'tap';
       else if (val === 'tun') devType = 'tun';
+    } else if (key === 'ifconfig') {
+      hasIfconfig = true;
     } else if (key === 'auth-user-pass') {
       needAuth = true;
     } else if (key === 'remote') {
@@ -75,16 +83,13 @@ function parseConfig(text) {
           if (!Number.isNaN(p)) port = p;
         }
         if (parts[3]) {
-          const pr = parts[3].toLowerCase();
-          if (pr === 'udp' || pr === 'tcp' || pr === 'udp4' || pr === 'tcp4' ||
-              pr === 'udp6' || pr === 'tcp6') {
-            proto = pr.replace(/[46]$/, '');
-          }
+          const pr = normProto(parts[3]);
+          if (pr) proto = pr;
         }
       }
     } else if (key === 'proto') {
-      const pr = (parts[1] || '').toLowerCase();
-      if (pr) proto = pr.replace(/[46]$/, '');
+      const pr = normProto(parts[1]);
+      if (pr) proto = pr;
     }
 
     if (key === 'auth-user-pass' && parts.length > 1) {
@@ -105,6 +110,15 @@ function parseConfig(text) {
     // Some configs have no "remote" (unusual), allow it anyway.
   }
 
+  // On Windows, OpenVPN refuses to start a tun interface without --ifconfig.
+  // Most profiles rely on the server to push the real addresses, so we only
+  // add a placeholder to pass the validation; the pushed values replace it.
+  let ifconfigAdded = false;
+  if (devType === 'tun' && !hasIfconfig && process.platform === 'win32') {
+    out.push('ifconfig 10.8.0.2 10.8.0.1');
+    ifconfigAdded = true;
+  }
+
   return {
     remote,
     proto: proto || (remote ? 'udp' : null),
@@ -112,6 +126,7 @@ function parseConfig(text) {
     needAuth,
     devType,
     errors,
+    ifconfigAdded,
     config: out.join('\n')
   };
 }

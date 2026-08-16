@@ -6,6 +6,7 @@
   "scripts": {
     "start": "electron .",
     "test": "electron tests/unit.js",
+    "test:engine": "electron tests/engine.js",
     "icons": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/make-icon.ps1"
   },
   "author": "Mr712",

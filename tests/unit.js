@@ -43,6 +43,15 @@ app.whenReady().then(() => {
     JSON.stringify(tapParsed.errors)
   );
 
+  const noIf = parser.parseConfig('dev tun\nremote a.b 1194 tcp4-client\nauth-user-pass');
+  check(
+    'parser: adds ifconfig for tun without ifconfig',
+    noIf.ifconfigAdded === true && /ifconfig 10\.8\.0\.2 10\.8\.0\.1/.test(noIf.config)
+  );
+
+  const withIf = parser.parseConfig('dev tun\nifconfig 10.5.5.2 10.5.5.1\nremote a.b 1194');
+  check('parser: keeps existing ifconfig', withIf.ifconfigAdded === false && /ifconfig 10\.5\.5\.2/.test(withIf.config));
+
   // ---- store ----
   store.resetAll();
   check('store: reset gives defaults', store.getSettings().language === 'en');
