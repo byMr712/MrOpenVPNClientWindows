@@ -116,6 +116,6 @@ async function importProfile() {
 
 async function copyLog() {
   const log = await window.api.vpnGetLog();
-  await window.api.copyText(log ? log.join('\n') : '');
+  await window.api.copyText(log && log.length ? log.map((e) => e.message).join('\n') : '');
   UI.showToast(i18n.t('copied_log'));
 }

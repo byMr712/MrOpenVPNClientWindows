@@ -81,7 +81,7 @@ const Dialogs = {
           class: 'text-body-small',
           style: 'white-space:pre-wrap;word-break:break-word;max-height:320px;overflow-y:auto;margin-top:12px;text-align:left;font-family:Consolas,monospace'
         },
-        log && log.length ? log.join('\n') : i18n.t('no_data')
+        log && log.length ? log.map((e) => e.message).join('\n') : i18n.t('no_data')
       );
       const dlg = UI.showDialog({
         title: i18n.t('log'),
@@ -89,7 +89,7 @@ const Dialogs = {
           {
             label: i18n.t('copy_log'),
             onClick: () => {
-              window.api.copyText(log ? log.join('\n') : '');
+              window.api.copyText(log && log.length ? log.map((e) => e.message).join('\n') : '');
               UI.showToast(i18n.t('copied_log'));
             }
           },
