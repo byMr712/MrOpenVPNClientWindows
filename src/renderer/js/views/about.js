@@ -10,6 +10,11 @@ function showAboutDialog() {
     i18n.t('source_code')
   );
 
+  const anim = (App.data.settings && App.data.settings.statusAnim) || '';
+  if (anim) {
+    startOutlineAnim(ghBtn, anim, { accent: themes.accentColor, idle: idleOutline(), width: 2 });
+  }
+
   UI.showDialog({
     title: 'MrOpenVPN Client For Windows',
     small: true,

@@ -49,7 +49,7 @@ const UI = {
     }, 2500);
   },
 
-  showDialog({ title, message, buttons, small, body }) {
+  showDialog({ title, message, buttons, small, body, onClose }) {
     const root = document.getElementById('dialogRoot');
     const scrim = UI.h('div', { class: 'dialog-scrim' });
     const dialog = UI.h(
@@ -66,6 +66,7 @@ const UI = {
 
     const close = () => {
       scrim.remove();
+      if (onClose) onClose();
     };
     scrim.addEventListener('mousedown', (e) => {
       if (e.target === scrim) close();
@@ -74,8 +75,8 @@ const UI = {
 
     for (const b of buttons || []) {
       const btn = UI.h('button', { class: 'btn-outlined', onclick: () => {
-        close();
         if (b.onClick) b.onClick();
+        close();
       } }, b.label);
       btnRow.appendChild(btn);
     }

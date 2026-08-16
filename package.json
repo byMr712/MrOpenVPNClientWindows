@@ -29,7 +29,15 @@
       {
         "from": "licenses",
         "to": "licenses"
-      }
+      },
+  {
+    "from": "scripts/install-service.ps1",
+    "to": "scripts/install-service.ps1"
+  },
+  {
+    "from": "scripts/uninstall-service.ps1",
+    "to": "scripts/uninstall-service.ps1"
+  }
     ],
     "win": {
       "target": [
@@ -53,8 +61,11 @@
       "artifactName": "${productName}-${version}-portable.exe"
     },
     "nsis": {
-      "oneClick": true,
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
+      "include": "build/installer.nsh",
       "artifactName": "${productName}-${version}-setup.exe"
     }
   },

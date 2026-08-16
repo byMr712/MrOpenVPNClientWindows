@@ -1,9 +1,10 @@
 'use strict';
 
-// Integration test for the VpnEngine: starts the real openvpn.exe, talks to
-// its management interface, sends credentials and disconnects.
-// Note: this test runs without administrator rights, so it verifies the
-// management protocol, not the actual network adapter setup.
+// Integration test for the VpnEngine.
+// Verifies the "prompt for credentials first, then spawn" flow and, when the
+// OpenVPN interactive service is running, that openvpn is started through it
+// and its management interface is reachable. The test remote is unreachable,
+// so the connection never reaches CONNECTED.
 
 const { app } = require('electron');
 const fs = require('fs');
@@ -13,7 +14,6 @@ app.whenReady().then(async () => {
   const { VpnEngine } = require('../src/vpn/engine');
   const { parseConfig } = require('../src/vpn/parser');
   const engine = new VpnEngine();
-  engine._adminCache = true;
 
   const states = [];
   const logs = [];
@@ -24,20 +24,17 @@ app.whenReady().then(async () => {
     logs.push(e.message);
   });
 
-  const local = path.join(__dirname, '..', 'testdata', 'TheHome.ovpn');
-  const raw = fs.existsSync(local)
-    ? fs.readFileSync(local, 'utf8')
-    : [
-        'dev tun',
-        'remote 10.255.255.1 1194',
-        'proto udp',
-        'connect-retry 1',
-        'connect-retry-max 1',
-        'auth-user-pass',
-        'pull',
-        'tls-client',
-        'peer-fingerprint 00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00'
-      ].join('\n');
+  const raw = [
+    'dev tun',
+    'remote 10.255.255.1 1194',
+    'proto udp',
+    'connect-retry 1',
+    'connect-retry-max 1',
+    'auth-user-pass',
+    'pull',
+    'tls-client',
+    'peer-fingerprint 00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00'
+  ].join('\n');
   const parsed = parseConfig(raw);
   const profile = { id: 'engine-test', name: 'Synthetic', config: parsed.config };
 
@@ -56,18 +53,33 @@ app.whenReady().then(async () => {
   }
   check('openvpn binary found', true, ovpnPath);
 
-  engine.spawnOpenVpn(ovpnPath, profile);
-  await new Promise((r) => setTimeout(r, 3000));
-  check('management asks for password', states.includes('LEVEL_WAITING_FOR_USER_INPUT'), states.join(','));
+  let needPassword = false;
+  engine.once('need-password', () => {
+    needPassword = true;
+  });
 
-  engine.sendAuth('dummy', 'dummy');
-  await new Promise((r) => setTimeout(r, 6000));
-  check('reached connecting state', states.includes('LEVEL_CONNECTING_NO_SERVER_REPLY_YET'), states.join(','));
-  check('log lines received', logs.length > 0, logs.length);
-  check('no bogus connected state', !states.includes('LEVEL_CONNECTED'));
+  const connectPromise = engine.connect(profile).catch((err) => err.message);
+  await new Promise((r) => setTimeout(r, 500));
+  check('need-password emitted', needPassword);
+  check('waiting for user input', engine.getState().level === 'LEVEL_WAITING_FOR_USER_INPUT', engine.getState().level);
+  check('no process spawned yet', !engine.servicePid && !engine.tempDir);
+
+  engine.setPendingCredentials('engine-test', 'dummy', 'dummy');
+  const outcome = await connectPromise;
+  await new Promise((r) => setTimeout(r, 3000));
+
+  if (outcome === 'interactive_service_not_running') {
+    check('service not running handled cleanly', engine.getState().level === 'LEVEL_NOTCONNECTED', engine.getState().level);
+    check('temp dir cleaned', !engine.tempDir);
+  } else {
+    check('connect() resolved', outcome === undefined, String(outcome));
+    check('connecting state reached', states.includes('LEVEL_CONNECTING_NO_SERVER_REPLY_YET'), states.join(','));
+    check('log lines received', logs.length > 0, logs.length);
+    check('no bogus connected state', !states.includes('LEVEL_CONNECTED'));
+  }
 
   engine.disconnect();
-  await new Promise((r) => setTimeout(r, 4000));
+  await new Promise((r) => setTimeout(r, 5000));
   check('disconnected state reached', engine.getState().level === 'LEVEL_NOTCONNECTED', engine.getState().level);
   check('temp dir cleaned', !engine.tempDir);
 

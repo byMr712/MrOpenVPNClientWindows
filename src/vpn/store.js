@@ -13,6 +13,7 @@ const DEFAULTS = {
   settings: {
     autoConnect: false,
     screenOffPause: false,
+    fullTunnel: false,
     notify: true,
     debugMode: false,
     language: 'en',

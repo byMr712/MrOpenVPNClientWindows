@@ -6,6 +6,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const netMod = require('net');
+const store = require('./store');
 
 // Connection levels, mirroring Android's ConnectionStatus enum.
 const LEVEL_NOTCONNECTED = 'LEVEL_NOTCONNECTED';
@@ -27,7 +28,8 @@ class VpnEngine extends EventEmitter {
     this.currentProfile = null;
     this.logBuffer = [];
     this.socket = null;
-    this.openvpnProcess = null;
+    this.servicePid = null;
+    this._pendingConnect = null;
     this.tempDir = null;
     this.tempConfig = null;
     this.pendingCreds = null;
@@ -72,54 +74,132 @@ class VpnEngine extends EventEmitter {
     if (!openvpn) {
       return Promise.reject(new Error('openvpn_not_found'));
     }
+    if (this.isActive()) {
+      this.forceStop();
+    }
     this.currentProfile = profile;
     this.profileUuid = profile.id;
-    return this.spawnOpenVpn(openvpn, profile);
+    const hasCreds = !!(profile.username && profile.password);
+    if (hasCreds) {
+      return this.spawnOpenVpn(profile);
+    }
+    this.setLevel(LEVEL_WAITING_FOR_USER_INPUT, profile.id);
+    this.emit('need-password', { profileId: profile.id, kind: 'auth' });
+    return new Promise((resolve, reject) => {
+      this._pendingConnect = { profile, resolve, reject };
+    });
   }
 
-  async spawnOpenVpn(openvpn, profile) {
+  async spawnOpenVpn(profile) {
     this.log('MrOpenVPN Windows Client starting');
     this.setLevel(LEVEL_START, profile.id);
 
-    const port = await this.freePort();
-    this.tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mropenvpn-'));
-    const cfgPath = path.join(this.tempDir, 'client.ovpn');
-    let configText = profile.config || '';
-    configText += '\n';
-    configText += 'auth-nocache\n';
-    // Allow legacy ciphers used by old OpenVPN 2.x servers.
-    configText += 'data-ciphers-fallback BF-CBC\n';
-    configText += 'script-security 2\n';
-    configText += 'verb 3\n';
-    fs.writeFileSync(cfgPath, configText, 'utf8');
-    this.tempConfig = cfgPath;
-
-    const args = [
-      '--config', cfgPath,
-      '--management', '127.0.0.1', String(port),
-      '--management-query-passwords',
-      '--management-log-cache', '2000',
-      '--auth-nocache'
-    ];
-
-    this.log(`OpenVPN: ${path.basename(openvpn)}`);
-
-    const { spawn } = require('child_process');
-    this.openvpnProcess = spawn(openvpn, args, {
-      cwd: path.dirname(openvpn),
-      windowsHide: true,
-      stdio: 'ignore'
-    });
-    this.openvpnProcess.on('error', (err) => {
-      this.log(`OpenVPN spawn error: ${err.message}`);
+    const creds =
+      this.pendingCreds && this.pendingCreds.profileId === profile.id
+        ? this.pendingCreds
+        : { profileId: profile.id, username: profile.username, password: profile.password };
+    if (!creds || !creds.username || !creds.password) {
       this.handleProcessExit();
-    });
-    this.openvpnProcess.on('exit', (code) => {
-      this.log(`OpenVPN process exited (code ${code})`);
-      this.handleProcessExit();
-    });
+      throw new Error('missing_credentials');
+    }
 
-    this.connectManagement(port);
+    try {
+      const port = await this.freePort();
+      this.tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mropenvpn-'));
+      const cfgPath = path.join(this.tempDir, 'client.ovpn');
+      const authPath = path.join(this.tempDir, 'auth.txt');
+      const logPath = path.join(this.tempDir, 'openvpn.log');
+      fs.writeFileSync(authPath, `${creds.username}\n${creds.password}\n`, 'utf8');
+
+      const authFile = authPath.replace(/\\/g, '/');
+      const logFile = logPath.replace(/\\/g, '/');
+      // Full-tunnel toggle: strip any redirect-gateway directive from the
+      // imported config, then re-add it only when "fullTunnel" is enabled.
+      const settings = store.getSettings();
+      let configText = (profile.config || '')
+        .split(/\r?\n/)
+        .filter((l) => !/^\s*redirect-gateway\b/i.test(l))
+        .join('\n');
+      configText += '\n';
+      if (settings.fullTunnel) {
+        configText += 'redirect-gateway def1\n';
+      }
+      configText += 'windows-driver tap-windows6\n';
+      configText += `auth-user-pass "${authFile}"\n`;
+      configText += `log "${logFile}"\n`;
+      configText += 'script-security 2\n';
+      configText += 'verb 3\n';
+      fs.writeFileSync(cfgPath, configText, 'utf8');
+      this.tempConfig = cfgPath;
+
+      const options = `--config "${cfgPath}" --management 127.0.0.1 ${port} --management-log-cache 2000`;
+
+      this.log(`OpenVPN: ${path.basename(this.openVpnPath())}`);
+      const pid = await this.startViaService(app.getPath('userData'), options);
+      this.servicePid = pid;
+      this.log(`OpenVPN started via interactive service (pid ${pid})`);
+      this.connectManagement(port);
+    } catch (err) {
+      this.log(`OpenVPN start error: ${err.message}`);
+      this.handleProcessExit();
+      throw err;
+    }
+  }
+
+  startViaService(directory, options) {
+    const pipePath = '\\\\.\\pipe\\openvpn\\service';
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      let timer;
+      const fail = (err) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        conn.destroy();
+        reject(err);
+      };
+
+      const conn = netMod.createConnection({ path: pipePath });
+      let buf = Buffer.alloc(0);
+
+      timer = setTimeout(() => {
+        fail(new Error('interactive_service_timeout'));
+      }, 15000);
+
+      conn.on('connect', () => {
+        const payload = `${directory}\0${options}\0\0`;
+        conn.write(Buffer.from(payload, 'utf16le'));
+      });
+      conn.on('data', (chunk) => {
+        buf = Buffer.concat([buf, chunk]);
+        const text = buf.toString('utf16le');
+        const lines = text.split('\n');
+        if (lines.length < 3 || !lines[2]) return;
+        const errorCode = parseInt(lines[0], 16);
+        const pid = parseInt(lines[1], 16);
+        if (!Number.isFinite(pid) || pid <= 0) {
+          fail(new Error(`interactive_service_error: ${lines[2] || lines[1] || 'unexpected response'}`));
+          return;
+        }
+        if (errorCode !== 0) {
+          fail(new Error(`interactive_service_error: ${lines[2] || lines[1] || 'startup failed'}`));
+          return;
+        }
+        settled = true;
+        clearTimeout(timer);
+        conn.destroy();
+        resolve(pid);
+      });
+      conn.on('error', (err) => {
+        const code = err && (err.code || err.message);
+        fail(new Error(code === 'ECONNREFUSED' || code === 'ENOENT' ? 'interactive_service_not_running' : `interactive_service_error: ${code}`));
+      });
+      conn.on('close', () => {
+        if (!settled) {
+          fail(new Error('interactive_service_closed'));
+        }
+      });
+    });
   }
 
   handleProcessExit() {
@@ -131,6 +211,7 @@ class VpnEngine extends EventEmitter {
       }
       this.socket = null;
     }
+    this.servicePid = null;
     if (this.profileUuid) {
       this.setLevel(LEVEL_NOTCONNECTED, this.profileUuid);
     }
@@ -159,7 +240,8 @@ class VpnEngine extends EventEmitter {
           setTimeout(() => tryConnect(attempt + 1), 250);
         } else {
           this.log('Could not connect to the OpenVPN management interface');
-          this.setLevel(LEVEL_UNKNOWN, this.profileUuid);
+          this.readOpenVpnLogTail();
+          this.handleProcessExit();
         }
       };
       sock.once('error', onError);
@@ -207,6 +289,21 @@ class VpnEngine extends EventEmitter {
       } catch (e) {
         // ignore
       }
+    }
+  }
+
+  readOpenVpnLogTail() {
+    if (!this.tempDir) return;
+    const logPath = path.join(this.tempDir, 'openvpn.log');
+    if (!fs.existsSync(logPath)) return;
+    try {
+      const text = fs.readFileSync(logPath, 'utf8');
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      for (const line of lines.slice(-40)) {
+        this.log(line);
+      }
+    } catch (e) {
+      // ignore
     }
   }
 
@@ -326,6 +423,17 @@ class VpnEngine extends EventEmitter {
 
   setPendingCredentials(profileId, username, password) {
     this.pendingCreds = { profileId, username, password };
+    const pending = this._pendingConnect;
+    if (pending && pending.profile.id === profileId) {
+      this._pendingConnect = null;
+      this.spawnOpenVpn(pending.profile).then(pending.resolve, pending.reject);
+    } else if (pending) {
+      this._pendingConnect = null;
+      pending.reject(new Error('cancelled'));
+      if (profileId) {
+        this.setLevel(LEVEL_NOTCONNECTED, profileId);
+      }
+    }
   }
 
   sendAuth(username, password) {
@@ -339,6 +447,21 @@ class VpnEngine extends EventEmitter {
   }
 
   disconnect() {
+    if (this._pendingConnect) {
+      const pending = this._pendingConnect;
+      this._pendingConnect = null;
+      pending.reject(new Error('cancelled'));
+      if (this.profileUuid) {
+        this.setLevel(LEVEL_NOTCONNECTED, this.profileUuid);
+      }
+      return;
+    }
+    if (!this.socket && !this.servicePid && !this.tempConfig) {
+      if (this.profileUuid) {
+        this.setLevel(LEVEL_NOTCONNECTED, this.profileUuid);
+      }
+      return;
+    }
     if (this.profileUuid) {
       this.log('Disconnecting…');
     }
@@ -346,23 +469,30 @@ class VpnEngine extends EventEmitter {
     // Fallback: also try to stop the process shortly after.
     setTimeout(() => {
       if (this.profileUuid && this.level !== LEVEL_NOTCONNECTED) {
-        if (this.openvpnProcess && !this.openvpnProcess.killed) {
-          this.openvpnProcess.kill();
-        }
+        this.stopViaTaskkill();
         this.setLevel(LEVEL_NOTCONNECTED, this.profileUuid);
       }
     }, 3000);
   }
 
   forceStop() {
-    if (this.openvpnProcess && !this.openvpnProcess.killed) {
-      try {
-        this.openvpnProcess.kill();
-      } catch (e) {
-        // ignore
-      }
+    if (this._pendingConnect) {
+      const pending = this._pendingConnect;
+      this._pendingConnect = null;
+      pending.reject(new Error('cancelled'));
     }
     this.send('signal SIGTERM');
+    this.stopViaTaskkill();
+  }
+
+  stopViaTaskkill() {
+    if (!this.servicePid) return;
+    try {
+      const { exec } = require('child_process');
+      exec(`taskkill /PID ${this.servicePid} /T /F`, () => {});
+    } catch (e) {
+      // ignore
+    }
   }
 
   pause() {

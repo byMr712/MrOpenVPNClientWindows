@@ -3,6 +3,7 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu, clipboard, Notification, dialog, powerMonitor } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { execFile } = require('child_process');
 
 const store = require('./vpn/store');
 const { parseConfig } = require('./vpn/parser');
@@ -114,10 +115,11 @@ function refreshTrayMenu() {
       enabled: store.getProfiles().length > 0,
       click: () => {
         if (active) {
+          wasConnectedUuid = null;
           engine.disconnect();
         } else {
           const last = store.getProfile(store.getSettings().lastProfileUuid) || store.getProfiles()[0];
-          if (last) connectProfile(last);
+          if (last) connectProfile(last).catch(() => {});
         }
       }
     },
@@ -161,8 +163,12 @@ function createTray() {
 
 // ---- notification ----
 
+let lastNotifiedState = null;
+
 function showStatusNotification(state) {
   if (!store.getSettings().notify) return;
+  if (lastNotifiedState === state) return;
+  lastNotifiedState = state;
   if (Notification.isSupported()) {
     const n = new Notification({
       title: 'MrOpenVPN Client',
@@ -179,13 +185,74 @@ function showStatusNotification(state) {
   }
 }
 
+// ---- OpenVPN interactive service ----
+
+function serviceScriptPath() {
+  const base = app.isPackaged ? process.resourcesPath : path.join(__dirname, '..');
+  return path.join(base, 'scripts', 'install-service.ps1');
+}
+
+function uninstallServiceScriptPath() {
+  const base = app.isPackaged ? process.resourcesPath : path.join(__dirname, '..');
+  return path.join(base, 'scripts', 'uninstall-service.ps1');
+}
+
+function queryService(name) {
+  return new Promise((resolve) => {
+    execFile('sc.exe', ['query', name], (err, stdout) => {
+      if (err) return resolve({ exists: false, running: false });
+      resolve({ exists: true, running: /\bRUNNING\b/i.test(stdout || '') });
+    });
+  });
+}
+
+function runServiceScript(script) {
+  const inner = `-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "${script}"`;
+  const cmd = `Start-Process -FilePath 'powershell.exe' -ArgumentList '${inner}' -Verb RunAs -Wait`;
+  return new Promise((resolve, reject) => {
+    execFile('powershell.exe', ['-NoProfile', '-WindowStyle', 'Hidden', '-Command', cmd], { windowsHide: true }, (err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+}
+
+function installServiceElevated() {
+  return runServiceScript(serviceScriptPath());
+}
+
+function uninstallServiceElevated() {
+  return runServiceScript(uninstallServiceScriptPath());
+}
+
+function ensureInteractiveService() {
+  return queryService('OpenVPNServiceInteractive').then((before) => {
+    if (before.running) return { running: true };
+    if (!fs.existsSync(serviceScriptPath())) {
+      return { running: false, reason: 'interactive_service_not_running' };
+    }
+    return installServiceElevated()
+      .then(() => queryService('OpenVPNServiceInteractive'))
+      .catch(() => ({ running: false, exists: false }))
+      .then((after) => {
+        if (after.running) return { running: true };
+        return { running: false, reason: 'service_install_failed' };
+      });
+  });
+}
+
 // ---- engine wiring ----
 
 function connectProfile(profile) {
-  return engine.connect(profile).then(() => {
-    store.setSettings({ lastProfileUuid: profile.id });
-    refreshTrayMenu();
-    return { ok: true };
+  return ensureInteractiveService().then((svc) => {
+    if (!svc.running) {
+      throw new Error(svc.reason || 'interactive_service_not_running');
+    }
+    return engine.connect(profile).then(() => {
+      store.setSettings({ lastProfileUuid: profile.id });
+      refreshTrayMenu();
+      return { ok: true };
+    });
   });
 }
 
@@ -328,6 +395,7 @@ function registerIpc() {
 
   ipcMain.handle('profiles:delete', (e, id) => {
     if (engine.profileUuid === id) {
+      wasConnectedUuid = null;
       engine.disconnect();
     }
     store.removeProfile(id);
@@ -343,8 +411,9 @@ function registerIpc() {
     return { ok: true, login: finalName };
   });
 
-  ipcMain.handle('users:listPlain', () => {
-    return store.getUsers().map((u) => ({ login: u.login, password: u.password }));
+  ipcMain.handle('users:getCredentials', (e, login) => {
+    const u = store.getUsers().find((x) => x.login === login);
+    return u ? { login: u.login, password: u.password } : null;
   });
 
   ipcMain.handle('users:delete', (e, login) => {
@@ -370,6 +439,15 @@ function registerIpc() {
     return true;
   });
 
+  ipcMain.handle('service:status', () => queryService('OpenVPNServiceInteractive'));
+
+  ipcMain.handle('service:uninstall', () => {
+    if (!fs.existsSync(uninstallServiceScriptPath())) return { error: 'service_install_failed' };
+    return uninstallServiceElevated()
+      .then(() => ({ ok: true }))
+      .catch(() => ({ error: 'service_install_failed' }));
+  });
+
   ipcMain.handle('vpn:connect', async (e, id) => {
     const profile = store.getProfile(id);
     if (!profile) return { error: 'profile_not_found' };
@@ -381,6 +459,7 @@ function registerIpc() {
   });
 
   ipcMain.handle('vpn:disconnect', () => {
+    wasConnectedUuid = null;
     engine.disconnect();
     return true;
   });
@@ -390,17 +469,16 @@ function registerIpc() {
     return true;
   });
 
-  ipcMain.handle('vpn:sendCredentials', (e, profileId, username, password, remember) => {
+  ipcMain.handle('vpn:sendCredentials', (e, profileId, username, password) => {
     const profile = store.getProfile(profileId);
     if (profile) {
       store.updateProfile(profileId, { username, password });
-      if (remember) {
-        store.saveUser(username, password);
-        send('users:changed', store.getUsers().map((u) => ({ login: u.login, hasPassword: !!u.password })));
-      }
+    }
+    if (username && password) {
+      store.saveUser(username, password);
+      send('users:changed', store.getUsers().map((u) => ({ login: u.login, hasPassword: !!u.password })));
     }
     engine.setPendingCredentials(profileId, username, password);
-    engine.sendAuth(username, password);
     send('profiles:changed', store.getProfiles().map(profileDto));
     return true;
   });

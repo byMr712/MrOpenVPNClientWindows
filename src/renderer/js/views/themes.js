@@ -6,7 +6,7 @@ Views['themes'] = {
 
     const page = UI.h('div', { class: 'page' });
 
-    const current = s.experimentalTheme || (s.lightTheme ? 'default_white' : 'default_black');
+    const current = s.experimentalTheme || (s.lightTheme ? 'default_white' : '');
 
     const options = [
       { key: '', name: i18n.t('theme_default_black'), desc: i18n.t('theme_default_black_desc'), light: false, accent: '#FFFFFF' },

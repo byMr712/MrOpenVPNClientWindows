@@ -19,7 +19,7 @@ contextBridge.exposeInMainWorld('api', {
   deleteProfile: (id) => ipcRenderer.invoke('profiles:delete', id),
 
   addUser: (login, password) => ipcRenderer.invoke('users:add', login, password),
-  listUsersPlain: () => ipcRenderer.invoke('users:listPlain'),
+  getUserCredentials: (login) => ipcRenderer.invoke('users:getCredentials', login),
   deleteUser: (login) => ipcRenderer.invoke('users:delete', login),
   clearUsers: () => ipcRenderer.invoke('users:clear'),
   resetData: () => ipcRenderer.invoke('app:reset'),
@@ -27,10 +27,12 @@ contextBridge.exposeInMainWorld('api', {
   notifyOnline: (isOnline) => ipcRenderer.invoke('app:online', isOnline),
 
   vpnConnect: (id) => ipcRenderer.invoke('vpn:connect', id),
+  getServiceStatus: () => ipcRenderer.invoke('service:status'),
+  uninstallService: () => ipcRenderer.invoke('service:uninstall'),
   vpnDisconnect: () => ipcRenderer.invoke('vpn:disconnect'),
   vpnResume: () => ipcRenderer.invoke('vpn:resume'),
-  vpnSendCredentials: (profileId, username, password, remember) =>
-    ipcRenderer.invoke('vpn:sendCredentials', profileId, username, password, remember),
+  vpnSendCredentials: (profileId, username, password) =>
+    ipcRenderer.invoke('vpn:sendCredentials', profileId, username, password),
   vpnGetLog: () => ipcRenderer.invoke('vpn:getLog'),
   vpnGetState: () => ipcRenderer.invoke('vpn:getState'),
 

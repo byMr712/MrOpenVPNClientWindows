@@ -6,6 +6,7 @@ Views['settings'] = {
 
     const autoSw = UI.switchEl(s.autoConnect, (v) => window.api.setSettings({ autoConnect: v }));
     const screenSw = UI.switchEl(s.screenOffPause, (v) => window.api.setSettings({ screenOffPause: v }));
+    const tunnelSw = UI.switchEl(s.fullTunnel, (v) => window.api.setSettings({ fullTunnel: v }));
     const notifySw = UI.switchEl(s.notify, (v) => window.api.setSettings({ notify: v }));
     const debugSw = UI.switchEl(s.debugMode, (v) => {
       if (v) confirmDebugMode(debugSw);
@@ -33,7 +34,9 @@ Views['settings'] = {
       UI.h('div', { class: 'settings-card' },
         UI.settingsRow({ title: i18n.t('automatic_connection'), summary: i18n.t('automatic_connection_summary'), trailing: autoSw, onClick: toggleOnClick(autoSw, 'autoConnect') }),
         UI.h('div', { class: 'settings-divider' }),
-        UI.settingsRow({ title: i18n.t('pause_when_screen_off'), summary: i18n.t('pause_when_screen_off_summary'), trailing: screenSw, onClick: toggleOnClick(screenSw, 'screenOffPause') })
+        UI.settingsRow({ title: i18n.t('pause_when_screen_off'), summary: i18n.t('pause_when_screen_off_summary'), trailing: screenSw, onClick: toggleOnClick(screenSw, 'screenOffPause') }),
+        UI.h('div', { class: 'settings-divider' }),
+        UI.settingsRow({ title: i18n.t('full_tunnel'), summary: i18n.t('full_tunnel_summary'), trailing: tunnelSw, onClick: toggleOnClick(tunnelSw, 'fullTunnel') })
       )
     );
 
@@ -83,6 +86,10 @@ Views['settings'] = {
           UI.h('div', { class: 'settings-divider' }),
           UI.h('div', { class: 'settings-row', onclick: () => confirmClearUsers() },
             UI.h('div', { class: 'row-text' }, UI.h('div', { class: 'row-title text-title-small danger' }, i18n.t('clear_users')))
+          ),
+          UI.h('div', { class: 'settings-divider' }),
+          UI.h('div', { class: 'settings-row', onclick: () => confirmDeleteService() },
+            UI.h('div', { class: 'row-text' }, UI.h('div', { class: 'row-title text-title-small danger' }, i18n.t('delete_service')))
           ),
           UI.h('div', { class: 'settings-divider' }),
           UI.h('div', { class: 'settings-row', onclick: () => confirmResetData() },
@@ -140,6 +147,24 @@ function confirmClearUsers() {
     message: i18n.t('clear_users_confirm'),
     buttons: [
       { label: i18n.t('delete'), onClick: () => window.api.clearUsers() },
+      { label: i18n.t('close'), onClick: () => {} }
+    ]
+  });
+}
+
+function confirmDeleteService() {
+  UI.showDialog({
+    title: i18n.t('delete_service'),
+    message: i18n.t('delete_service_confirm'),
+    buttons: [
+      {
+        label: i18n.t('delete'),
+        onClick: () =>
+          window.api.uninstallService().then((r) => {
+            if (r && r.error) UI.showToast(i18n.t('service_not_running'));
+            else UI.showToast(i18n.t('service_deleted'));
+          })
+      },
       { label: i18n.t('close'), onClick: () => {} }
     ]
   });

@@ -11,10 +11,27 @@ Views['main'] = {
 
     const activeProfile = profiles.find((p) => p.id === s.profileUuid);
     const isActive = !!activeProfile && level !== 'LEVEL_NOTCONNECTED' && level !== 'LEVEL_AUTH_FAILED';
+    const isConnecting = level === 'LEVEL_CONNECTING_NO_SERVER_REPLY_YET' ||
+      level === 'LEVEL_CONNECTING_SERVER_REPLIED' ||
+      level === 'LEVEL_START' ||
+      level === 'LEVEL_WAITING_FOR_USER_INPUT';
 
     const statusCard = UI.h(
       'div',
-      { class: 'status-card' },
+      {
+        class: 'status-card',
+        style: 'cursor:pointer',
+        onclick: () => {
+          if (isActive) {
+            window.api.vpnDisconnect();
+            return;
+          }
+          const active = profiles.find((p) => p.id === (s.profileUuid || settings.lastProfileUuid));
+          const target = active || profiles[0];
+          if (target) doConnect(target);
+          else UI.showToast(i18n.t('no_profiles'));
+        }
+      },
       UI.h('div', { class: 'text-display' }, statusText)
     );
 
@@ -33,24 +50,28 @@ Views['main'] = {
         'div',
         {
           class: 'profile-card',
-          onclick: () => doConnect(p)
+          onclick: () => Dialogs.editProfile(p)
         },
         UI.h(
           'div',
           { class: 'profile-text' },
-          UI.h('div', { class: 'profile-name text-title-small' }, p.name),
-          UI.h('div', { class: 'profile-user text-body-small mt-8' }, profileSubtitle(p))
+          UI.h('div', { class: 'profile-name text-title-small' }, i18n.t('profile_prefix') + p.name),
+          p.username
+            ? UI.h('div', { class: 'profile-user text-title-small' }, i18n.t('user_prefix') + p.username)
+            : null
         ),
-        UI.h('button', { class: 'btn-filled', onclick: (e) => { e.stopPropagation(); doConnect(p); } }, i18n.t('connect'))
+        isThisActive
+          ? UI.h('button', { class: 'btn-filled', onclick: (e) => { e.stopPropagation(); window.api.vpnDisconnect(); } }, i18n.t('disconnect'))
+          : UI.h('button', { class: 'btn-filled', onclick: (e) => { e.stopPropagation(); doConnect(p); } }, i18n.t('connect'))
       );
       list.appendChild(card);
-      if (isThisActive) {
+      if (isConnecting && activeProfile && activeProfile.id === p.id) {
         startOutlineAnim(card, settings.profileAnim, { accent: themes.accentColor, idle: idleOutline(), width: 2 });
       }
     }
 
-    // status outline animation
-    if (isActive || level === 'LEVEL_CONNECTING_NO_SERVER_REPLY_YET' || level === 'LEVEL_CONNECTING_SERVER_REPLIED' || level === 'LEVEL_START' || level === 'LEVEL_WAITING_FOR_USER_INPUT') {
+    // status outline animation (only while connecting)
+    if (isConnecting) {
       startOutlineAnim(statusCard, settings.statusAnim, { accent: themes.accentColor, idle: idleOutline(), width: 2 });
     }
 
@@ -85,11 +106,6 @@ function mainStatusText(level) {
   }
 }
 
-function profileSubtitle(p) {
-  if (p.remote) return `${p.proto || 'udp'} ${p.remote}:${p.port || ''}`.trim();
-  return p.proto || '';
-}
-
 function idleOutline() {
   return getComputedStyle(document.documentElement).getPropertyValue('--outline-variant').trim() || '#333333';
 }
@@ -100,9 +116,25 @@ function startOutlineAnim(el, kind, opts) {
 }
 
 async function doConnect(profile) {
+  const st = await window.api.getServiceStatus();
+  if (st && !st.running) {
+    const agreed = await new Promise((resolve) => {
+      UI.showDialog({
+        title: i18n.t('service_confirm_title'),
+        message: i18n.t('service_confirm_message'),
+        buttons: [
+          { label: i18n.t('service_confirm_cancel'), onClick: () => resolve(false) },
+          { label: i18n.t('service_confirm_agree'), onClick: () => resolve(true) }
+        ]
+      });
+    });
+    if (!agreed) return;
+  }
   const res = await window.api.vpnConnect(profile.id);
   if (res && res.error) {
     if (res.error === 'openvpn_not_found') UI.showToast(i18n.t('openvpn_not_found'));
+    else if (res.error === 'interactive_service_not_running' || res.error === 'service_install_failed') UI.showToast(i18n.t('service_not_running'));
+    else if (res.error === 'cancelled') return;
     else UI.showToast(i18n.t('vpn_start_error'));
   }
 }
