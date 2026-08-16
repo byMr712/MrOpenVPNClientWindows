@@ -49,12 +49,6 @@ const App = {
       if (this.current === 'users') this.render();
     });
 
-    window.api.onToast((t) => {
-      const key = typeof t === 'string' ? t : t.kind;
-      if (key === 'relaunching') UI.showToast(i18n.t('relaunching'));
-      else UI.showToast(key);
-    });
-
     window.api.onNeedPassword((p) => {
       Dialogs.showCredentials(p);
     });

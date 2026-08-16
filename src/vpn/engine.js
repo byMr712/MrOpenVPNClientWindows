@@ -6,7 +6,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const netMod = require('net');
-const { execFile } = require('child_process');
 
 // Connection levels, mirroring Android's ConnectionStatus enum.
 const LEVEL_NOTCONNECTED = 'LEVEL_NOTCONNECTED';
@@ -32,9 +31,7 @@ class VpnEngine extends EventEmitter {
     this.tempDir = null;
     this.tempConfig = null;
     this.pendingCreds = null;
-    this._adminCache = null;
     this._pausedByUs = false;
-    this._connectAttempt = null;
   }
 
   // ---- openvpn discovery ----
@@ -54,50 +51,6 @@ class VpnEngine extends EventEmitter {
   openVpnInfo() {
     const p = this.openVpnPath();
     return { found: !!p, path: p };
-  }
-
-  // ---- admin checks ----
-
-  isAdmin() {
-    if (this._adminCache !== null) return Promise.resolve(this._adminCache);
-    return new Promise((resolve) => {
-      if (process.platform !== 'win32') {
-        this._adminCache = false;
-        resolve(false);
-        return;
-      }
-      const cmd = [
-        '([Security.Principal.WindowsPrincipal]',
-        '[Security.Principal.WindowsIdentity]::GetCurrent())',
-        '.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)'
-      ].join('');
-      execFile(
-        'powershell',
-        ['-NoProfile', '-NonInteractive', '-Command', cmd],
-        { windowsHide: true, timeout: 20000 },
-        (err, stdout) => {
-          this._adminCache = String(stdout || '').trim().toLowerCase() === 'true';
-          resolve(this._adminCache);
-        }
-      );
-    });
-  }
-
-  relaunchElevated(extraArgs) {
-    return new Promise((resolve, reject) => {
-      const args = [process.execPath].concat(process.argv.slice(1)).concat(extraArgs || []);
-      const quoted = args.map((a) => `"${String(a).replace(/"/g, '\\"')}"`).join(' ');
-      const psCmd = `Start-Process -FilePath '${process.execPath.replace(/'/g, "''")}' -ArgumentList '${quoted.replace(/'/g, "''")}' -Verb RunAs`;
-      execFile(
-        'powershell',
-        ['-NoProfile', '-NonInteractive', '-Command', psCmd],
-        { windowsHide: true, timeout: 30000 },
-        (err) => {
-          if (err) reject(new Error('admin_launch_failed'));
-          else resolve(true);
-        }
-      );
-    });
   }
 
   // ---- lifecycle ----
@@ -121,21 +74,7 @@ class VpnEngine extends EventEmitter {
     }
     this.currentProfile = profile;
     this.profileUuid = profile.id;
-
-    const withAdmin = () => {
-      this._connectAttempt = profile.id;
-      return this.spawnOpenVpn(openvpn, profile);
-    };
-
-    return this.isAdmin().then((admin) => {
-      if (admin) return withAdmin();
-      // Not elevated: relaunch the whole app as administrator with a
-      // request to connect. This mirrors the Android VPN permission dialog.
-      return this.relaunchElevated(['--connect', profile.id]).then(() => {
-        // Let the caller quit this instance.
-        return { relaunched: true };
-      });
-    });
+    return this.spawnOpenVpn(openvpn, profile);
   }
 
   async spawnOpenVpn(openvpn, profile) {
@@ -165,29 +104,20 @@ class VpnEngine extends EventEmitter {
 
     this.log(`OpenVPN: ${path.basename(openvpn)}`);
 
-    if (this._adminCache === true) {
-      // Already elevated, spawn directly with no console window.
-      const { spawn } = require('child_process');
-      this.openvpnProcess = spawn(openvpn, args, {
-        cwd: path.dirname(openvpn),
-        windowsHide: true,
-        stdio: 'ignore'
-      });
-      this.openvpnProcess.on('exit', (code) => {
-        this.log(`OpenVPN process exited (code ${code})`);
-        this.handleProcessExit();
-      });
-    } else {
-      // Not elevated (should not happen because connect() elevates first),
-      // but handle it gracefully anyway.
-      const { spawn } = require('child_process');
-      this.openvpnProcess = spawn(openvpn, args, {
-        cwd: path.dirname(openvpn),
-        windowsHide: true,
-        stdio: 'ignore'
-      });
-      this.openvpnProcess.on('exit', () => this.handleProcessExit());
-    }
+    const { spawn } = require('child_process');
+    this.openvpnProcess = spawn(openvpn, args, {
+      cwd: path.dirname(openvpn),
+      windowsHide: true,
+      stdio: 'ignore'
+    });
+    this.openvpnProcess.on('error', (err) => {
+      this.log(`OpenVPN spawn error: ${err.message}`);
+      this.handleProcessExit();
+    });
+    this.openvpnProcess.on('exit', (code) => {
+      this.log(`OpenVPN process exited (code ${code})`);
+      this.handleProcessExit();
+    });
 
     this.connectManagement(port);
   }

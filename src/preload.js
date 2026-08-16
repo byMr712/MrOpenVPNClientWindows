@@ -40,7 +40,6 @@ contextBridge.exposeInMainWorld('api', {
   onState: (cb) => on('state:changed', cb),
   onLog: (cb) => on('log:changed', cb),
   onNeedPassword: (cb) => on('vpn:need-password', cb),
-  onToast: (cb) => on('toast', cb),
   onProfilesChanged: (cb) => on('profiles:changed', cb),
   onUsersChanged: (cb) => on('users:changed', cb),
   onSettingsChanged: (cb) => on('settings:changed', cb)

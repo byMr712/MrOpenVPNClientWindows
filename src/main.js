@@ -26,10 +26,6 @@ function send(channel, payload) {
   }
 }
 
-function toast(payload) {
-  send('toast', payload);
-}
-
 function profileDto(p) {
   if (!p) return null;
   return {
@@ -53,8 +49,7 @@ function publicState() {
     vpn: engine.getState(),
     version: APP_VERSION,
     versionDisplay: `${APP_VERSION.replace(/\.\d+$/, '')} (2)`,
-    openvpn: engine.openVpnInfo(),
-    admin: null
+    openvpn: engine.openVpnInfo()
   };
 }
 
@@ -187,15 +182,7 @@ function showStatusNotification(state) {
 // ---- engine wiring ----
 
 function connectProfile(profile) {
-  return engine.connect(profile).then((res) => {
-    if (res && res.relaunched) {
-      toast({ kind: 'relaunching' });
-      setTimeout(() => {
-        quitting = true;
-        app.quit();
-      }, 800);
-      return { relaunched: true };
-    }
+  return engine.connect(profile).then(() => {
     store.setSettings({ lastProfileUuid: profile.id });
     refreshTrayMenu();
     return { ok: true };
@@ -457,18 +444,7 @@ app.whenReady().then(() => {
   createWindow();
   createTray();
 
-  const args = process.argv;
-  const connectIdx = args.indexOf('--connect');
-  const pendingConnect = connectIdx >= 0 ? args[connectIdx + 1] : null;
-
   mainWindow.webContents.once('did-finish-load', () => {
-    if (pendingConnect) {
-      const profile = store.getProfile(pendingConnect);
-      if (profile) {
-        setTimeout(() => connectProfile(profile).catch(() => {}), 400);
-      }
-    } else {
-      autoConnect();
-    }
+    autoConnect();
   });
 });

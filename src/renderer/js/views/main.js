@@ -102,8 +102,7 @@ function startOutlineAnim(el, kind, opts) {
 async function doConnect(profile) {
   const res = await window.api.vpnConnect(profile.id);
   if (res && res.error) {
-    if (res.error === 'admin_launch_failed') UI.showToast(i18n.t('admin_required'));
-    else if (res.error === 'openvpn_not_found') UI.showToast(i18n.t('openvpn_not_found'));
+    if (res.error === 'openvpn_not_found') UI.showToast(i18n.t('openvpn_not_found'));
     else UI.showToast(i18n.t('vpn_start_error'));
   }
 }
