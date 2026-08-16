@@ -1,32 +1,15 @@
 'use strict';
 
-const ACCENTS = [
-  { name: 'white', color: '#FFFFFF' },
-  { name: 'red', color: '#FF0000' },
-  { name: 'deepOrange', color: '#FF5722' },
-  { name: 'orange', color: '#FF9800' },
-  { name: 'yellow', color: '#FFEB3B' },
-  { name: 'lime', color: '#CDDC39' },
-  { name: 'green', color: '#4CAF50' },
-  { name: 'teal', color: '#009688' },
-  { name: 'cyan', color: '#00BCD4' },
-  { name: 'blue', color: '#2196F3' },
-  { name: 'indigo', color: '#3F51B5' },
-  { name: 'deepPurple', color: '#673AB7' },
-  { name: 'purple', color: '#9C27B0' },
-  { name: 'pink', color: '#E91E63' },
-  { name: 'brown', color: '#795548' },
-  { name: 'black', color: '#000000' }
-];
+const ACCENTS = ['#1E88E5', '#2E7D32', '#EF6C00', '#8E24AA', '#D81B60', '#00897B'];
 
 const EXPERIMENTAL_THEMES = [
-  { key: '', name: 'default_black', light: false, order: 0 },
-  { key: 'default_white', name: 'default_white', light: true, order: 1 },
-  { key: 'neon', name: 'neon', light: false, order: 2 },
-  { key: 'oled', name: 'oled', light: false, order: 3 },
-  { key: 'paper', name: 'paper', light: true, order: 4 },
-  { key: 'redline', name: 'redline', light: false, order: 5 },
-  { key: 'mint', name: 'mint', light: true, order: 6 }
+  { key: '', name: 'default_black', light: false, order: 0, accent: '#FFFFFF' },
+  { key: 'default_white', name: 'default_white', light: true, order: 1, accent: '#000000' },
+  { key: 'neon', name: 'neon', light: false, order: 2, accent: '#00E5FF' },
+  { key: 'oled', name: 'oled', light: false, order: 3, accent: '#33FF33' },
+  { key: 'paper', name: 'paper', light: true, order: 4, accent: '#22355E' },
+  { key: 'redline', name: 'redline', light: false, order: 5, accent: '#FF453A' },
+  { key: 'mint', name: 'mint', light: true, order: 6, accent: '#00A67D' }
 ];
 
 const themes = {

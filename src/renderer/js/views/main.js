@@ -18,21 +18,13 @@ Views['main'] = {
       UI.h('div', { class: 'text-display' }, statusText)
     );
 
-    const copyBtn = UI.h('button', { class: 'btn-outlined mt-8', onclick: () => copyLog() }, i18n.t('copy_log'));
-
-    const profilesTitle = UI.h('div', { class: 'text-title-medium profiles-title' }, i18n.t('profiles'));
+    const copyBtn = settings.debugMode
+      ? UI.h('button', { class: 'btn-outlined mt-8', onclick: () => copyLog() }, i18n.t('copy_log'))
+      : null;
 
     const addBtn = UI.h('button', { class: 'btn-outlined mt-8', onclick: () => importProfile() }, i18n.t('add_profile'));
 
     const list = UI.h('div', {});
-    if (profiles.length === 0) {
-      list.appendChild(
-        UI.h('div', { class: 'card card-stroke mt-8', style: 'padding:24px;text-align:center' },
-          UI.h('div', { class: 'text-title-medium' }, i18n.t('no_profiles')),
-          UI.h('div', { class: 'text-body-small mt-8' }, i18n.t('no_profiles_hint'))
-        )
-      );
-    }
     for (const p of profiles) {
       const isThisActive = isActive && activeProfile.id === p.id;
       const card = UI.h(
@@ -66,7 +58,7 @@ Views['main'] = {
         UI.h('div', { class: 'topbar-title text-title-medium' }, i18n.t('app_name'))
       )
     );
-    const page = UI.h('div', { class: 'page' }, statusCard, copyBtn, profilesTitle, addBtn, list);
+    const page = UI.h('div', { class: 'page' }, statusCard, copyBtn, addBtn, list);
     root.appendChild(page);
   }
 };

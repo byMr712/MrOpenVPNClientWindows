@@ -1,53 +1,53 @@
 /* MrOpenVPN Client - mobile-like UI, faithful to the Android app */
 
 @font-face {
-  font-family: "Roboto";
-  src: url("../../assets/fonts/roboto-latin-400-normal.woff2") format("woff2");
+  font-family: "Inter";
+  src: url("../../assets/fonts/inter-latin-400-normal.woff2") format("woff2");
   font-weight: 400;
   font-display: swap;
 }
 @font-face {
-  font-family: "Roboto";
-  src: url("../../assets/fonts/roboto-cyrillic-400-normal.woff2") format("woff2");
+  font-family: "Inter";
+  src: url("../../assets/fonts/inter-cyrillic-400-normal.woff2") format("woff2");
   font-weight: 400;
   unicode-range: U+0400-04FF;
   font-display: swap;
 }
 @font-face {
-  font-family: "Roboto";
-  src: url("../../assets/fonts/roboto-latin-300-normal.woff2") format("woff2");
+  font-family: "Inter";
+  src: url("../../assets/fonts/inter-latin-300-normal.woff2") format("woff2");
   font-weight: 300;
   font-display: swap;
 }
 @font-face {
-  font-family: "Roboto";
-  src: url("../../assets/fonts/roboto-cyrillic-300-normal.woff2") format("woff2");
+  font-family: "Inter";
+  src: url("../../assets/fonts/inter-cyrillic-300-normal.woff2") format("woff2");
   font-weight: 300;
   unicode-range: U+0400-04FF;
   font-display: swap;
 }
 @font-face {
-  font-family: "Roboto";
-  src: url("../../assets/fonts/roboto-latin-500-normal.woff2") format("woff2");
+  font-family: "Inter";
+  src: url("../../assets/fonts/inter-latin-500-normal.woff2") format("woff2");
   font-weight: 500;
   font-display: swap;
 }
 @font-face {
-  font-family: "Roboto";
-  src: url("../../assets/fonts/roboto-cyrillic-500-normal.woff2") format("woff2");
+  font-family: "Inter";
+  src: url("../../assets/fonts/inter-cyrillic-500-normal.woff2") format("woff2");
   font-weight: 500;
   unicode-range: U+0400-04FF;
   font-display: swap;
 }
 @font-face {
-  font-family: "Roboto";
-  src: url("../../assets/fonts/roboto-latin-700-normal.woff2") format("woff2");
+  font-family: "Inter";
+  src: url("../../assets/fonts/inter-latin-700-normal.woff2") format("woff2");
   font-weight: 700;
   font-display: swap;
 }
 @font-face {
-  font-family: "Roboto";
-  src: url("../../assets/fonts/roboto-cyrillic-700-normal.woff2") format("woff2");
+  font-family: "Inter";
+  src: url("../../assets/fonts/inter-cyrillic-700-normal.woff2") format("woff2");
   font-weight: 700;
   unicode-range: U+0400-04FF;
   font-display: swap;
@@ -318,6 +318,7 @@ button {
   height: 100%;
   margin: 0;
   cursor: pointer;
+  z-index: 1;
 }
 .switch .track {
   position: absolute;
@@ -325,6 +326,7 @@ button {
   border-radius: 16px;
   background: color-mix(in srgb, var(--accent, var(--on-surface)) 20%, transparent);
   transition: background 0.2s;
+  pointer-events: none;
 }
 .switch .thumb {
   position: absolute;
@@ -336,6 +338,7 @@ button {
   background: var(--on-surface);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   transition: transform 0.2s, background 0.2s;
+  pointer-events: none;
 }
 .switch input:checked ~ .track {
   background: var(--accent, var(--on-surface));
@@ -460,6 +463,15 @@ button {
   color: var(--error);
 }
 
+.settings-version {
+  text-align: center;
+  color: var(--outline);
+}
+
+.underlined {
+  text-decoration: underline;
+}
+
 /* ---- profile list ---- */
 
 .profile-card {
@@ -555,6 +567,38 @@ button {
 }
 .swatch:active {
   transform: scale(0.92);
+}
+
+.swatch-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.accent-hint {
+  color: var(--outline);
+}
+
+.about-body {
+  text-align: center;
+}
+
+.about-source {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 16px;
+  background: var(--surface-container);
+  color: var(--accent, var(--on-surface));
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+.about-source:hover {
+  background: color-mix(in srgb, var(--accent, var(--on-surface)) 10%, transparent);
 }
 
 /* ---- spinner (Android Spinner look) ---- */

@@ -55,7 +55,7 @@ merchantability, fitness for a particular purpose and non-infringement.
 | `src/renderer/` | The whole UI: `index.html`, `css/`, `js/`, `js/views/` |
 | `src/vpn/` | Engine: `engine.js` (management protocol), `parser.js` (.ovpn), `store.js` (persistence) |
 | `bin/` | Bundled VPN runtime: `openvpn.exe`, DLLs, `wintun.dll` |
-| `assets/` | Icons and fonts (Roboto, woff2 subsets) |
+| `assets/` | Icons and fonts (Inter, woff2 subsets) |
 | `tests/` | Tests: `unit.js` (parser + store), `engine.js` (integration) |
 | `scripts/make-icon.ps1` | Generates `assets/icon.png` (square icon) |
 | `LICENSE` | GNU GPL v3 (application) |
@@ -120,7 +120,7 @@ All license files live in `licenses/` and are copied into the portable build:
 | `vcruntime140.dll` | 14.29.30037.0 | Microsoft VC++ Redistributable | `LICENSE-VCRUNTIME.txt` |
 | `wintun.dll` | 0.14.1 | GPL-2.0 | `LICENSE-WINTUN.txt`, `LICENSE-GPL-2.0.txt` |
 | Electron (runtime) | 33.4.11 | MIT | `LICENSE-ELECTRON.txt` |
-| Roboto (fonts, `assets/fonts/`) | — | Apache-2.0 (font), MIT (@fontsource) | `LICENSE-ROBOTO.txt` |
+| Inter (fonts, `assets/fonts/`) | — | SIL OFL 1.1 (font), MIT (@fontsource) | `LICENSE-INTER.txt` |
 
 Notes:
 - **OpenVPN** is GPL-2.0 with a special exception allowing it to be linked against
@@ -194,7 +194,7 @@ the project.
 
 ```powershell
 # 1. The single exe launches from anywhere
-.\dist\MrOpenVPNClient-1.0.0-portable.exe
+.\dist\MrOpenVPNClient-1.1.0-portable.exe
 
 # 2. Licenses inside the build (unpacked form — the win-unpacked folder)
 Get-ChildItem .\dist\win-unpacked\resources\licenses

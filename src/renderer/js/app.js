@@ -84,6 +84,13 @@ const App = {
     }
   },
 
+  goHome() {
+    this.stack = [];
+    this.current = 'main';
+    this.params = null;
+    this.render();
+  },
+
   // ---- drawer ----
 
   get drawerOpen() {
@@ -109,52 +116,54 @@ const App = {
     const drawer = document.getElementById('drawer');
     drawer.innerHTML = '';
 
-    const items = [
-      { key: 'settings', label: i18n.t('settings'), icon: 'settings' },
-      { key: 'users', label: i18n.t('users'), icon: 'group' },
-      { key: 'themes', label: i18n.t('app_theme'), icon: 'palette' },
-      { key: 'animations', label: i18n.t('app_animations'), icon: 'bolt' }
-    ];
-    const first = true;
-    const list = UI.h('div', {});
-    for (const it of items) {
-      const item = UI.h(
+    const navItem = (key, label, icon) =>
+      UI.h(
         'div',
         {
           class: 'drawer-nav-item text-title-medium',
           onclick: () => {
             this.closeDrawer();
-            this.navigate(it.key);
+            this.navigate(key);
           }
         },
-        UI.icon(it.icon, 24),
-        UI.h('span', {}, it.label)
+        UI.icon(icon, 24),
+        UI.h('span', {}, label)
       );
-      list.appendChild(item);
-      list.appendChild(UI.h('div', { class: 'drawer-divider' }));
-    }
-    drawer.appendChild(list);
+
+    const top = UI.h('div', {});
+    top.appendChild(navItem('main', i18n.t('home'), 'home'));
+    top.appendChild(navItem('users', i18n.t('users'), 'group'));
+    top.appendChild(UI.h('div', { class: 'drawer-divider' }));
+    drawer.appendChild(top);
 
     const bottom = UI.h('div', { class: 'drawer-bottom' });
+    bottom.appendChild(UI.h('div', { class: 'drawer-divider' }));
+    const settings = UI.h(
+      'div',
+      {
+        class: 'drawer-nav-item text-title-medium',
+        onclick: () => {
+          this.closeDrawer();
+          this.navigate('settings');
+        }
+      },
+      UI.icon('settings', 24),
+      UI.h('span', {}, i18n.t('settings'))
+    );
     const about = UI.h(
       'div',
       {
         class: 'drawer-nav-item text-title-medium',
         onclick: () => {
           this.closeDrawer();
-          this.navigate('about');
+          showAboutDialog();
         }
       },
       UI.icon('info', 24),
       UI.h('span', {}, i18n.t('about'))
     );
-    const version = UI.h(
-      'div',
-      { class: 'drawer-nav-item text-body-small' },
-      UI.h('span', {}, `${i18n.t('version')} ${this.data.version}`)
-    );
+    bottom.appendChild(settings);
     bottom.appendChild(about);
-    bottom.appendChild(version);
     drawer.appendChild(bottom);
   }
 };

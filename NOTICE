@@ -35,8 +35,8 @@ Other third-party components
 ============================
 - Electron runtime: Copyright (c) OpenJS Foundation, MIT license
   (licenses/LICENSE-ELECTRON.txt).
-- Roboto font: Copyright Google LLC, Apache-2.0; @fontsource/roboto npm
-  package is MIT (licenses/LICENSE-ROBOTO.txt).
+- Inter font: Copyright 2016 The Inter Project Authors, SIL OFL 1.1;
+  @fontsource/inter npm package is MIT (licenses/LICENSE-INTER.txt).
 
 OpenVPN trademark
 =================

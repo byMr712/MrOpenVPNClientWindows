@@ -52,6 +52,7 @@ function publicState() {
     users: store.getUsers().map((u) => ({ login: u.login, hasPassword: !!u.password })),
     vpn: engine.getState(),
     version: APP_VERSION,
+    versionDisplay: `${APP_VERSION.replace(/\.\d+$/, '')} (2)`,
     openvpn: engine.openVpnInfo(),
     admin: null
   };
@@ -69,7 +70,7 @@ function createWindow() {
     resizable: true,
     maximizable: true,
     backgroundColor: '#000000',
-    title: 'MrOpenVPN Client',
+    title: 'MrOpenVPN Client For Windows',
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     autoHideMenuBar: true,
     show: false,
@@ -288,7 +289,7 @@ function registerIpc() {
     return s;
   });
 
-  ipcMain.handle('profiles:import', async () => {
+  ipcMain.handle('profiles:import', async (e) => {
     const win = BrowserWindow.fromWebContents(e.sender) || mainWindow;
     const result = await dialog.showOpenDialog(win, {
       title: 'Import .ovpn profile',

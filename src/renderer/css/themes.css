@@ -11,8 +11,8 @@
   --outline: #666666;
   --outline-variant: #333333;
   --error: #ff6b62;
-  --font-family: "Roboto", "Segoe UI", sans-serif;
-  --font-secondary: "Roboto", "Segoe UI", sans-serif;
+  --font-family: "Inter", "Segoe UI", sans-serif;
+  --font-secondary: "Inter", "Segoe UI", sans-serif;
   --letter-spacing: 0;
   --card-radius: 12px;
   --status-radius: 16px;
@@ -28,8 +28,8 @@
   --outline: #74777f;
   --outline-variant: #c4c7c5;
   --error: #ba1a1a;
-  --font-family: "Roboto", "Segoe UI", sans-serif;
-  --font-secondary: "Roboto", "Segoe UI", sans-serif;
+  --font-family: "Inter", "Segoe UI", sans-serif;
+  --font-secondary: "Inter", "Segoe UI", sans-serif;
   --letter-spacing: 0;
   --card-radius: 12px;
   --status-radius: 16px;
@@ -62,8 +62,8 @@
   --outline: #333333;
   --outline-variant: #2a2a2a;
   --error: #ffb4ab;
-  --font-family: "Roboto", "Segoe UI", sans-serif;
-  --font-secondary: "Roboto", "Segoe UI", sans-serif;
+  --font-family: "Inter", "Segoe UI", sans-serif;
+  --font-secondary: "Inter", "Segoe UI", sans-serif;
   --font-weight-normal: 300;
   --letter-spacing: 0;
   --card-radius: 12px;
@@ -114,8 +114,8 @@
   --outline: #707b77;
   --outline-variant: #c0cbc7;
   --error: #ba1a1a;
-  --font-family: "Roboto", "Segoe UI", sans-serif;
-  --font-secondary: "Roboto", "Segoe UI", sans-serif;
+  --font-family: "Inter", "Segoe UI", sans-serif;
+  --font-secondary: "Inter", "Segoe UI", sans-serif;
   --letter-spacing: 0;
   --card-radius: 28px;
   --status-radius: 28px;

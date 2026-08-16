@@ -7,7 +7,10 @@ Views['settings'] = {
     const autoSw = UI.switchEl(s.autoConnect, (v) => window.api.setSettings({ autoConnect: v }));
     const screenSw = UI.switchEl(s.screenOffPause, (v) => window.api.setSettings({ screenOffPause: v }));
     const notifySw = UI.switchEl(s.notify, (v) => window.api.setSettings({ notify: v }));
-    const debugSw = UI.switchEl(s.debugMode, (v) => window.api.setSettings({ debugMode: v }));
+    const debugSw = UI.switchEl(s.debugMode, (v) => {
+      if (v) confirmDebugMode(debugSw);
+      else window.api.setSettings({ debugMode: false });
+    });
 
     const toggleOnClick = (sw, key) => (e) => {
       if (e.target.closest('.switch')) return;
@@ -15,15 +18,6 @@ Views['settings'] = {
       sw.setState(v);
       window.api.setSettings({ [key]: v });
     };
-
-    const themeName = s.experimentalTheme || 'default_black';
-    const langRow = languageRow(s.language);
-
-    const resetRow = UI.h(
-      'div',
-      { class: 'settings-row', onclick: () => resetApp() },
-      UI.h('div', { class: 'row-text' }, UI.h('div', { class: 'row-title text-title-small danger' }, i18n.t('reset_app')))
-    );
 
     root.appendChild(
       UI.h('div', { class: 'topbar' },
@@ -34,99 +28,130 @@ Views['settings'] = {
 
     const page = UI.h('div', { class: 'page' });
 
-    const genSection = UI.h('div', { class: 'settings-section text-title-medium' }, i18n.t('settings'));
-    const genCard = UI.h('div', { class: 'settings-card' },
-      UI.settingsRow({ title: i18n.t('automatic_connection'), summary: i18n.t('automatic_connection_summary'), trailing: autoSw, onClick: toggleOnClick(autoSw, 'autoConnect') }),
-      UI.h('div', { class: 'settings-divider' }),
-      UI.settingsRow({ title: i18n.t('pause_when_screen_off'), summary: i18n.t('pause_when_screen_off_summary'), trailing: screenSw, onClick: toggleOnClick(screenSw, 'screenOffPause') }),
-      UI.h('div', { class: 'settings-divider' }),
-      UI.settingsRow({ title: i18n.t('notification'), summary: i18n.t('notification_summary'), trailing: notifySw, onClick: toggleOnClick(notifySw, 'notify') }),
-      UI.h('div', { class: 'settings-divider' }),
-      UI.settingsRow({ title: i18n.t('debug_mode'), summary: i18n.t('debug_mode_summary'), trailing: debugSw, onClick: toggleOnClick(debugSw, 'debugMode') })
-    );
-    page.appendChild(genSection);
-    page.appendChild(genCard);
-
-    const langSection = UI.h('div', { class: 'settings-section text-title-medium' }, i18n.t('language'));
-    page.appendChild(langSection);
+    page.appendChild(UI.h('div', { class: 'settings-section text-title-medium' }, i18n.t('settings_connection_section')));
     page.appendChild(
       UI.h('div', { class: 'settings-card' },
-        UI.h('div', { class: 'settings-row', style: 'padding:12px 16px' }, langRow)
+        UI.settingsRow({ title: i18n.t('automatic_connection'), summary: i18n.t('automatic_connection_summary'), trailing: autoSw, onClick: toggleOnClick(autoSw, 'autoConnect') }),
+        UI.h('div', { class: 'settings-divider' }),
+        UI.settingsRow({ title: i18n.t('pause_when_screen_off'), summary: i18n.t('pause_when_screen_off_summary'), trailing: screenSw, onClick: toggleOnClick(screenSw, 'screenOffPause') })
       )
     );
 
-    const lookSection = UI.h('div', { class: 'settings-section text-title-medium' }, i18n.t('app_theme'));
-    page.appendChild(lookSection);
+    page.appendChild(UI.h('div', { class: 'settings-section text-title-medium' }, i18n.t('settings_appearance_section')));
     page.appendChild(
       UI.h('div', { class: 'settings-card' },
         UI.settingsRow({
-          title: i18n.t('app_theme'),
-          summary: `${themeName}  ·  ${themes.accentColor}`,
+          title: i18n.t('experimental_themes'),
+          summary: i18n.t('experimental_themes_summary'),
           trailing: UI.h('div', { class: 'row-chevron' }, '›'),
           onClick: () => App.navigate('themes')
         }),
         UI.h('div', { class: 'settings-divider' }),
         UI.settingsRow({
           title: i18n.t('app_animations'),
-          summary: `${i18n.t('status_animation')}: ${s.statusAnim || i18n.t('none')}  ·  ${i18n.t('profile_animation')}: ${s.profileAnim || i18n.t('none')}`,
+          summary: i18n.t('app_animations_summary'),
           trailing: UI.h('div', { class: 'row-chevron' }, '›'),
           onClick: () => App.navigate('animations')
         })
       )
     );
 
-    page.appendChild(resetRow);
+    page.appendChild(UI.h('div', { class: 'settings-section text-title-medium' }, i18n.t('language_section')));
+    page.appendChild(
+      UI.h('div', { class: 'settings-card' },
+        languageRow('en', s.language),
+        UI.h('div', { class: 'settings-divider' }),
+        languageRow('ru', s.language)
+      )
+    );
+
+    page.appendChild(UI.h('div', { class: 'settings-section text-title-medium' }, i18n.t('settings_debug_section')));
+    page.appendChild(
+      UI.h('div', { class: 'settings-card' },
+        UI.settingsRow({
+          title: i18n.t('debug_mode'),
+          summary: i18n.t('debug_mode_summary'),
+          trailing: debugSw,
+          onClick: (e) => {
+            if (e.target.closest('.switch')) return;
+            debugSw.input.click();
+          }
+        }),
+        s.debugMode ? [
+          UI.h('div', { class: 'settings-divider' }),
+          UI.settingsRow({ title: i18n.t('notification'), summary: i18n.t('notification_summary'), trailing: notifySw, onClick: toggleOnClick(notifySw, 'notify') }),
+          UI.h('div', { class: 'settings-divider' }),
+          UI.h('div', { class: 'settings-row', onclick: () => confirmClearUsers() },
+            UI.h('div', { class: 'row-text' }, UI.h('div', { class: 'row-title text-title-small danger' }, i18n.t('clear_users')))
+          ),
+          UI.h('div', { class: 'settings-divider' }),
+          UI.h('div', { class: 'settings-row', onclick: () => confirmResetData() },
+            UI.h('div', { class: 'row-text' }, UI.h('div', { class: 'row-title text-title-small danger' }, i18n.t('reset_data')))
+          )
+        ] : []
+      )
+    );
+
+    page.appendChild(
+      UI.h('div', { class: 'settings-version text-body-small mt-8' },
+        `${i18n.t('settings_version')}: ${App.data.versionDisplay || App.data.version}`
+      )
+    );
+
     root.appendChild(page);
   }
 };
 
-function languageRow(current) {
-  const box = UI.h(
+function languageRow(lang, current) {
+  const title = UI.h(
     'div',
-    { class: 'spinner' },
-    UI.h('div', { class: 'spinner-value text-body-medium' },
-      UI.h('span', {}, langLabel(current)),
-      UI.h('span', { class: 'spinner-arrow' }, '▾')
-    )
+    { class: 'row-title text-title-small' + (lang === current ? ' underlined' : '') },
+    langLabel(lang)
   );
-  box.addEventListener('click', () => {
-    const rect = box.getBoundingClientRect();
-    const dd = UI.h('div', { class: 'dropdown' });
-    dd.style.left = rect.left + 'px';
-    dd.style.top = rect.bottom + 'px';
-    dd.style.width = Math.max(rect.width, 120) + 'px';
-    for (const lang of ['en', 'ru']) {
-      const item = UI.h('div', { class: 'dropdown-item' + (lang === current ? ' selected' : ''), onclick: () => {
-        dd.remove();
-        window.api.setSettings({ language: lang });
-      } }, langLabel(lang));
-      dd.appendChild(item);
-    }
-    document.body.appendChild(dd);
-    setTimeout(() => {
-      const close = (e) => {
-        if (!dd.contains(e.target) && e.target !== box) {
-          dd.remove();
-          document.removeEventListener('mousedown', close);
-        }
-      };
-      document.addEventListener('mousedown', close);
-    }, 0);
+  const row = UI.h(
+    'div',
+    { class: 'settings-row' },
+    UI.h('div', { class: 'row-text' }, title),
+    UI.radioEl(lang === current)
+  );
+  row.addEventListener('click', () => {
+    if (lang !== current) window.api.setSettings({ language: lang });
   });
-  return box;
+  return row;
 }
 
 function langLabel(lang) {
   return lang === 'en' ? 'English' : 'Русский';
 }
 
-function resetApp() {
-  UI.confirm({
-    title: i18n.t('reset_app'),
-    message: i18n.t('reset_app_confirm'),
-    danger: true,
-    onYes: () => {
-      window.api.resetData();
-    }
+function confirmDebugMode(sw) {
+  UI.showDialog({
+    message: i18n.t('debug_mode_confirm_message'),
+    buttons: [
+      { label: i18n.t('cancel'), onClick: () => sw.setState(false) },
+      { label: i18n.t('enable'), onClick: () => window.api.setSettings({ debugMode: true }) }
+    ]
+  });
+}
+
+function confirmClearUsers() {
+  UI.showDialog({
+    title: i18n.t('clear_users'),
+    message: i18n.t('clear_users_confirm'),
+    buttons: [
+      { label: i18n.t('close'), onClick: () => {} },
+      { label: i18n.t('delete'), danger: true, onClick: () => window.api.clearUsers() }
+    ]
+  });
+}
+
+function confirmResetData() {
+  UI.showDialog({
+    title: i18n.t('reset_data'),
+    message: i18n.t('reset_data_confirm'),
+    buttons: [
+      { label: i18n.t('close'), onClick: () => {} },
+      { label: i18n.t('delete'), danger: true, onClick: () => window.api.resetData() }
+    ]
   });
 }

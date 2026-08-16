@@ -6,30 +6,66 @@ Views['themes'] = {
 
     const page = UI.h('div', { class: 'page' });
 
-    // ---- accent color ----
-    const accentSection = UI.h('div', { class: 'settings-section text-title-medium' }, i18n.t('accent_color'));
-    page.appendChild(accentSection);
+    const current = s.experimentalTheme || (s.lightTheme ? 'default_white' : 'default_black');
 
-    const swatchRow = UI.h('div', { class: 'mt-8', style: 'display:flex;flex-wrap:wrap;align-items:center;padding:8px 0' });
-    for (const a of ACCENTS) {
-      const selected = a.color.toLowerCase() === (themes.accentColor || '').toLowerCase();
-      const swatch = UI.h('button', {
-        class: 'swatch',
-        style: `background:${a.color}`,
-        onclick: () => {
-          if (a.color.toLowerCase() === '#000000') {
-            // black accent needs a visible check
+    const options = [
+      { key: '', name: i18n.t('theme_default_black'), desc: i18n.t('theme_default_black_desc'), light: false, accent: '#FFFFFF' }
+    ];
+    for (const t of EXPERIMENTAL_THEMES) {
+      if (!t.key) continue;
+      options.push({
+        key: t.key,
+        name: i18n.t('theme_' + t.key + '_name'),
+        desc: i18n.t('theme_' + t.key + '_desc'),
+        light: t.light,
+        accent: t.accent
+      });
+    }
+
+    for (const opt of options) {
+      const card = UI.h(
+        'div',
+        {
+          class: 'option-card mt-8',
+          onclick: () => {
+            window.api.setSettings({ experimentalTheme: opt.key, lightTheme: opt.light, accentColor: opt.accent });
+            App.goHome();
           }
-          window.api.setSettings({ accentColor: a.color.toUpperCase() });
-        }
-      }, selected ? '✓' : '');
+        },
+        UI.h('div', { class: 'option-text' },
+          UI.h('div', { class: 'option-title text-title-small' }, opt.name),
+          UI.h('div', { class: 'option-desc text-body-small mt-8' }, opt.desc)
+        ),
+        UI.radioEl(opt.key === current)
+      );
+      page.appendChild(card);
+    }
+
+    page.appendChild(UI.h('div', { class: 'settings-section text-title-medium mt-8' }, i18n.t('accent_title')));
+    page.appendChild(UI.h('div', { class: 'text-body-small accent-hint' }, i18n.t('accent_hint')));
+
+    const swatchRow = UI.h('div', { class: 'swatch-row' });
+    const selectedAccent = (themes.accentColor || '').toLowerCase();
+    for (const hex of ACCENTS) {
+      const selected = hex.toLowerCase() === selectedAccent;
+      const swatch = UI.h(
+        'button',
+        {
+          class: 'swatch',
+          onclick: () => window.api.setSettings({ accentColor: hex })
+        },
+        selected ? '✓' : ''
+      );
+      swatch.style.backgroundColor = hex;
+      swatch.style.color = contrastColor(hex);
       swatchRow.appendChild(swatch);
     }
+    page.appendChild(swatchRow);
 
     const customInput = UI.h('input', {
       class: 'input',
-      placeholder: `${i18n.t('custom')} (#RRGGBB)`,
-      value: themes.customColor || '',
+      placeholder: i18n.t('accent_custom_hint'),
+      value: s.accentColor || '',
       spellcheck: 'false',
       autocomplete: 'off'
     });
@@ -37,39 +73,7 @@ Views['themes'] = {
       if (e.key === 'Enter') applyCustom(customInput.value);
     });
     customInput.addEventListener('change', () => applyCustom(customInput.value));
-
-    page.appendChild(swatchRow);
     page.appendChild(customInput);
-
-    const applyCustom = (val) => {
-      const hex = parseHex(val.trim());
-      if (!hex) {
-        UI.showToast(i18n.t('custom'));
-        return;
-      }
-      window.api.setSettings({ accentColor: hex.toUpperCase(), customColor: hex.toUpperCase() });
-    };
-
-    // ---- experimental themes ----
-    const expSection = UI.h('div', { class: 'settings-section text-title-medium mt-8' }, i18n.t('experimental_themes'));
-    page.appendChild(expSection);
-
-    for (const t of EXPERIMENTAL_THEMES) {
-      const selected = (s.experimentalTheme || '') === t.key;
-      const radio = UI.radioEl(selected);
-      const card = UI.h(
-        'div',
-        { class: 'option-card mt-8', onclick: () => {
-          window.api.setSettings({ experimentalTheme: t.key, lightTheme: t.light });
-        } },
-        UI.h('div', { class: 'option-text' },
-          UI.h('div', { class: 'option-title text-title-small' }, t.name),
-          UI.h('div', { class: 'option-desc text-body-small mt-8' }, t.light ? 'light' : 'dark')
-        ),
-        radio
-      );
-      page.appendChild(card);
-    }
 
     root.appendChild(
       UI.h('div', { class: 'topbar' },
@@ -80,3 +84,16 @@ Views['themes'] = {
     root.appendChild(page);
   }
 };
+
+function applyCustom(val) {
+  const hex = parseHex(val.trim());
+  if (!hex) {
+    UI.showToast(i18n.t('custom'));
+    return;
+  }
+  window.api.setSettings({ accentColor: hex.toUpperCase(), customColor: hex.toUpperCase() });
+}
+
+function contrastColor(hex) {
+  return luminance(hex) > 0.6 ? '#000000' : '#ffffff';
+}

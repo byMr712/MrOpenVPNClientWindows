@@ -1,6 +1,6 @@
 {
   "name": "mropenvpn-client-windows",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MrOpenVPN Client for Windows - a desktop OpenVPN client with the same interface as the Android app",
   "main": "src/main.js",
   "scripts": {
@@ -22,13 +22,29 @@
       "NOTICE"
     ],
     "extraResources": [
-      { "from": "bin", "to": "bin" },
-      { "from": "licenses", "to": "licenses" }
+      {
+        "from": "bin",
+        "to": "bin"
+      },
+      {
+        "from": "licenses",
+        "to": "licenses"
+      }
     ],
     "win": {
       "target": [
-        { "target": "portable", "arch": ["x64"] },
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "assets/icon.png",
       "requestedExecutionLevel": "asInvoker"
@@ -45,7 +61,7 @@
   "author": "Mr712",
   "license": "GPL-3.0",
   "devDependencies": {
-    "@fontsource/roboto": "^5.1.0",
+    "@fontsource/inter": "^5.3.0",
     "electron": "^33.2.0",
     "electron-builder": "^26.15.3"
   },

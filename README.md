@@ -56,7 +56,7 @@ Android-приложения на **Electron**, с тем же интерфей�
 | `src/renderer/` | Весь UI: `index.html`, `css/`, `js/`, `js/views/` |
 | `src/vpn/` | Движок: `engine.js` (management-протокол), `parser.js` (.ovpn), `store.js` (хранилище) |
 | `bin/` | Встроенный VPN-рантайм: `openvpn.exe`, DLL, `wintun.dll` |
-| `assets/` | Иконки и шрифты (Roboto, subset woff2) |
+| `assets/` | Иконки и шрифты (Inter, subset woff2) |
 | `tests/` | Тесты: `unit.js` (парсер+хранилище), `engine.js` (интеграционный) |
 | `scripts/make-icon.ps1` | Генерация `assets/icon.png` (квадратная иконка) |
 | `LICENSE` | GNU GPL v3 (приложение) |
@@ -120,7 +120,7 @@ WebView2 системы, ~5–10 МБ), но это перенос интерф�
 | `vcruntime140.dll` | 14.29.30037.0 | Microsoft VC++ Redistributable | `LICENSE-VCRUNTIME.txt` |
 | `wintun.dll` | 0.14.1 | GPL-2.0 | `LICENSE-WINTUN.txt`, `LICENSE-GPL-2.0.txt` |
 | Electron (рантайм) | 33.4.11 | MIT | `LICENSE-ELECTRON.txt` |
-| Roboto (шрифты, `assets/fonts/`) | — | Apache-2.0 (шрифт), MIT (@fontsource) | `LICENSE-ROBOTO.txt` |
+| Inter (шрифты, `assets/fonts/`) | — | SIL OFL 1.1 (шрифт), MIT (@fontsource) | `LICENSE-INTER.txt` |
 
 Примечания:
 - **OpenVPN** — GPL-2.0 со специальным исключением на линковку с OpenSSL и на
@@ -195,7 +195,7 @@ CONNECTING и корректное завершение. Запускается 
 
 ```powershell
 # 1. Одиночный exe запускается из любого места
-.\dist\MrOpenVPNClient-1.0.0-portable.exe
+.\dist\MrOpenVPNClient-1.1.0-portable.exe
 
 # 2. Лицензии внутри exe-сборки (в распакованном виде — папка win-unpacked)
 Get-ChildItem .\dist\win-unpacked\resources\licenses
