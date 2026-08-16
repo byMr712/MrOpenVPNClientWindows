@@ -1,0 +1,14 @@
+WireGuard Wintun (wintun.dll)
+=============================
+
+wintun.dll (v0.14.1) is a TUN/TAP virtual network driver and user-mode API
+bundled with MrOpenVPN Client for Windows to provide the virtual adapter
+used by OpenVPN.
+
+Copyright (C) 2018-2024 WireGuard LLC. All Rights Reserved.
+
+License: GNU General Public License version 2 (GPL-2.0).
+
+The full GPL-2.0 license text is in LICENSE-GPL-2.0.txt (this folder).
+
+Project: https://www.wintun.net/  (https://git.zx2c4.com/wintun/)

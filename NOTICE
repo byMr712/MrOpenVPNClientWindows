@@ -1,0 +1,44 @@
+MrOpenVPN Client for Windows
+============================
+Copyright (C) Mr712
+Licensed under the GNU General Public License version 3 (GPL-3.0).
+Full text: LICENSE
+
+This is a desktop (Electron) port of the Android application
+MrOpenVPN Client: https://github.com/byMr712/MrOpenVPNClient
+
+Android original
+================
+MrOpenVPN Client for Android is a fork of ics-openvpn v0.7.64.
+    Original core: Arne Schwabe — https://github.com/schwabe/ics-openvpn
+    Custom shell:  Kotlin app module (com.mropenvpn.client) by Mr712
+    License: GNU GPL v3 (same as this Windows port)
+    Android repo: https://github.com/byMr712/MrOpenVPNClient
+
+The Windows port is an independent Electron reimplementation of the same
+user interface and behaviour. It does not contain Android / Kotlin code.
+
+Bundled third-party components (bin/)
+====================================
+The `bin/` folder of this project contains binaries from the official
+OpenVPN for Windows distribution (build.openvpn.net):
+
+| Component                    | Version       | License        | File(s) in licenses/   |
+|------------------------------|---------------|----------------|------------------------|
+| OpenVPN (openvpn.exe)        | 2.6.13        | GPL-2.0 + exceptions | LICENSE-OPENVPN.txt, LICENSE-GPL-2.0.txt |
+| OpenSSL (libcrypto-3-x64.dll, libssl-3-x64.dll) | 3.4.0 | Apache-2.0 | LICENSE-APACHE-2.0.txt |
+| pkcs11-helper (libpkcs11-helper-1.dll) | 1.0.0 | GPL-2.0-or-later | LICENSE-PKCS11HELPER.txt, LICENSE-GPL-2.0.txt |
+| Microsoft VC++ runtime (vcruntime140.dll) | 14.29.30037.0 | Microsoft license terms | LICENSE-VCRUNTIME.txt |
+| WireGuard Wintun (wintun.dll) | 0.14.1      | GPL-2.0        | LICENSE-WINTUN.txt, LICENSE-GPL-2.0.txt |
+
+Other third-party components
+============================
+- Electron runtime: Copyright (c) OpenJS Foundation, MIT license
+  (licenses/LICENSE-ELECTRON.txt).
+- Roboto font: Copyright Google LLC, Apache-2.0; @fontsource/roboto npm
+  package is MIT (licenses/LICENSE-ROBOTO.txt).
+
+OpenVPN trademark
+=================
+"OpenVPN" is a trademark of OpenVPN Inc. This project is not affiliated
+with, endorsed by, or sponsored by OpenVPN Inc.

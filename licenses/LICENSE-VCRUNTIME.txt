@@ -1,0 +1,21 @@
+Microsoft Visual C++ Redistributable (vcruntime140.dll)
+=======================================================
+
+vcruntime140.dll (14.29.30037.0) is a Microsoft Visual C++ Redistributable
+runtime component. It is bundled with MrOpenVPN Client for Windows because
+openvpn.exe (from the official OpenVPN for Windows build) links against the
+MSVC C runtime.
+
+This component is licensed under the Microsoft Software License Terms
+("Microsoft Visual C++ Redistributable") and may be distributed and
+redistributed only as a part of the software product it supports and subject
+to those license terms. It is not licensed under the GNU GPL.
+
+Full terms and the official redistribution guidelines:
+https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files
+https://learn.microsoft.com/en-us/cpp/windows/redistributable-code-missing-dlls
+
+This product contains Microsoft software licensed to Mr712 under the terms
+of the Microsoft Visual C++ Redistributable license. Microsoft retains all
+rights, title, and interest in this software. You may copy and distribute it
+with your application as described in the license above.

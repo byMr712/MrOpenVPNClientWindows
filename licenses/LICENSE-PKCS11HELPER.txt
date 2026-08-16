@@ -1,0 +1,14 @@
+pkcs11-helper (libpkcs11-helper-1.dll)
+======================================
+
+libpkcs11-helper-1.dll is the PKCS#11 helper library bundled inside the
+OpenVPN for Windows binary distribution (used by openvpn.exe for smartcard /
+PKCS#11 token support).
+
+Copyright (C) 2003-2023 Alon Bar-Lev and contributors.
+
+License: GNU General Public License version 2 or later (GPL-2.0-or-later).
+
+The full GPL-2.0 license text is in LICENSE-GPL-2.0.txt (this folder).
+
+Project: https://github.com/OpenSC/pkcs11-helper
