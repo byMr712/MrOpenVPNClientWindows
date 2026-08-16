@@ -49,7 +49,7 @@ merchantability, fitness for a particular purpose and non-infringement.
 
 | Path | Description |
 |---|---|
-| `build.bat` | Build script for the portable version (all paths are relative to the project root) |
+| `build.bat` | Build script for the single-file portable EXE (all paths are relative to the project root; output goes to `dist\`) |
 | `src/main.js` | Electron main process: window, tray, IPC, VPN engine wiring |
 | `src/preload.js` | contextBridge API for the renderer |
 | `src/renderer/` | The whole UI: `index.html`, `css/`, `js/`, `js/views/` |
@@ -64,38 +64,49 @@ merchantability, fitness for a particular purpose and non-infringement.
 | `README.md` | README in Russian (default) |
 | `README.en.md` | README in English (user choice) |
 
-## Portable build structure
+## Build structure
 
-`build.bat` produces the portable version in `dist\MrOpenVPNClient\` and the
-archive `dist\MrOpenVPNClient-<version>-win-x64.zip`:
+`build.bat` produces a **single self-contained file**
+`dist\MrOpenVPNClient-<version>-portable.exe` — copy it anywhere and run it;
+nothing else is required next to it.
+
+Inside (unpacked at launch; the draft layout is the `dist\win-unpacked\` folder):
 
 ```
 MrOpenVPNClient\
-├── MrOpenVPNClient.exe            # Electron runtime, renamed from electron.exe
-├── resources\
-│   ├── app\                       # the application itself (no asar, plain folder)
-│   │   ├── src\  assets\  package.json  LICENSE  NOTICE  licenses\
-│   └── bin\                       # VPN runtime: openvpn.exe + DLLs + wintun.dll
-├── LICENSE                        # Electron license (shipped with the runtime)
-└── LICENSES.chromium.html         # Chromium licenses (shipped with the runtime)
+├── MrOpenVPNClient.exe            # Electron runtime
+└── resources\
+    ├── app.asar                   # the app: src, assets, package.json, LICENSE, NOTICE
+    ├── bin\                       # VPN runtime: openvpn.exe + DLLs + wintun.dll
+    ├── licenses\                  # licenses of all bundled third-party components
+    ├── LICENSE                    # Electron license
+    └── LICENSES.chromium.html     # Chromium licenses
 ```
 
 Key facts:
 - When packaged, `app.isPackaged == true`, so the engine looks for `openvpn.exe`
-  in `resources\bin` (`process.resourcesPath\bin`).
-- The app runs **without asar** — every path is inside a plain folder, so there are
-  no issues with files, fonts or the tray icon.
-- The Electron runtime already contains its own `LICENSE` and `LICENSES.chromium.html`.
+  in `resources\bin` (`process.resourcesPath\bin`) — next to the exe, no absolute paths.
+- `bin\` and `licenses\` are kept out of the asar (`extraResources`), because
+  `openvpn.exe` cannot be launched from inside an archive.
 - The build is **fully portable and based on local paths only**: there are no
-  absolute paths in the code or scripts, and the exe works from anywhere (an
-  unpacked archive, a USB stick, etc.).
+  absolute paths in the code or scripts, and the exe works from anywhere (a USB
+  stick, any folder, etc.).
+
+## Why the exe is so large
+
+Inside the exe there is the entire **Electron runtime = Chromium** (~100 MB on
+disk). This is the price of a desktop framework: any Electron app is this size
+(VS Code, Slack, Discord). It only gets compressed down to **~74 MB** as a single
+file. If you want a truly lightweight client, consider **Tauri** (uses the
+system WebView2, ~5–10 MB), but that means reimplementing the UI in Rust.
 
 ## Build requirements
 
 - **Node.js 20+** (tested with Node v24, npm 11). https://nodejs.org/
 - **npm** — ships with Node.
-- Network is needed only on the first run (downloading Electron). If `node_modules`
-  is already installed, the build runs **fully offline**.
+- Network is needed only on the first run: npm installs `electron-builder`, and it
+  downloads the Electron archive and the NSIS builder (cached in
+  `%LOCALAPPDATA%\electron-builder\Cache`). All later builds run **fully offline**.
 
 ## Bundled component licenses
 
@@ -130,15 +141,16 @@ The script will:
 1. check Node.js/npm and `bin\openvpn.exe`;
 2. install npm dependencies if needed (`npm install`);
 3. run the unit tests and the engine integration test;
-4. assemble `dist\MrOpenVPNClient\` (runtime + `resources\app` + `resources\bin`);
-5. pack everything into `dist\MrOpenVPNClient-<version>-win-x64.zip`.
+4. build the single-file portable EXE (`npx electron-builder --win portable`).
 
-Any test or copy failure stops the build with a non-zero exit code.
+Any test or packaging failure stops the build with a non-zero exit code.
 It can be run from anywhere; paths inside the script are relative to the project root.
 At the end the script **pauses** and prints the full path of the built
-`MrOpenVPNClient.exe` and the archive.
+`MrOpenVPNClient-<version>-portable.exe` and its size.
 
-Options: `build.bat` takes no parameters.
+Portable EXE only: `npm run build:win` (same as step 4); an NSIS installer can
+also be built (`electron-builder --win nsis`) — both targets are configured in
+`package.json`.
 
 ## How the app works
 
@@ -181,12 +193,10 @@ the project.
 ## Verifying the result
 
 ```powershell
-# 1. The portable version launches
-.\dist\MrOpenVPNClient\MrOpenVPNClient.exe
+# 1. The single exe launches from anywhere
+.\dist\MrOpenVPNClient-1.0.0-portable.exe
 
-# 2. The archive extracts and runs from the unpacked folder
-Expand-Archive .\dist\MrOpenVPNClient-1.0.0-win-x64.zip -DestinationPath .\_unpack
-
-# 3. All licenses are present inside
-Get-ChildItem .\dist\MrOpenVPNClient\resources\app\licenses
+# 2. Licenses inside the build (unpacked form — the win-unpacked folder)
+Get-ChildItem .\dist\win-unpacked\resources\licenses
+Get-ChildItem .\dist\win-unpacked\resources\bin
 ```

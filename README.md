@@ -50,7 +50,7 @@ Android-приложения на **Electron**, с тем же интерфей�
 
 | Путь | Описание |
 |---|---|
-| `build.bat` | Скрипт сборки портативной версии (все пути — относительно корня) |
+| `build.bat` | Скрипт сборки одиночного portable-EXE (все пути — относительно корня; результат в `dist\`) |
 | `src/main.js` | Main-процесс Electron: окно, трей, IPC, управление VPN-движком |
 | `src/preload.js` | contextBridge API для рендерера |
 | `src/renderer/` | Весь UI: `index.html`, `css/`, `js/`, `js/views/` |
@@ -65,38 +65,48 @@ Android-приложения на **Electron**, с тем же интерфей�
 | `README.md` | README на русском (по умолчанию) |
 | `README.en.md` | README на английском (выбор пользователя) |
 
-## Структура портативной сборки
+## Структура сборки
 
-`build.bat` собирает в `dist\MrOpenVPNClient\` портативную версию и архив
-`dist\MrOpenVPNClient-<версия>-win-x64.zip`:
+`build.bat` собирает **одиночный самодостаточный файл**
+`dist\MrOpenVPNClient-<версия>-portable.exe` — его можно скопировать куда угодно
+и запустить, рядом ничего не нужно.
+
+Внутри (распаковка при запуске, черновик компоновки — папка `dist\win-unpacked\`):
 
 ```
 MrOpenVPNClient\
-├── MrOpenVPNClient.exe            # рантайм Electron, переименованный из electron.exe
-├── resources\
-│   ├── app\                       # само приложение (без asar, обычная папка)
-│   │   ├── src\  assets\  package.json  LICENSE  NOTICE  licenses\
-│   └── bin\                       # VPN-рантайм: openvpn.exe + DLL + wintun.dll
-├── LICENSE                        # лицензия Electron (в составе рантайма)
-└── LICENSES.chromium.html         # лицензии Chromium (в составе рантайма)
+├── MrOpenVPNClient.exe            # Electron-рантайм
+└── resources\
+    ├── app.asar                   # приложение: src, assets, package.json, LICENSE, NOTICE
+    ├── bin\                       # VPN-рантайм: openvpn.exe + DLL + wintun.dll
+    ├── licenses\                  # лицензии всех сторонних компонентов
+    ├── LICENSE                    # лицензия Electron
+    └── LICENSES.chromium.html     # лицензии Chromium
 ```
 
 Ключевые факты:
 - В упакованном виде `app.isPackaged == true`, поэтому движок ищет `openvpn.exe`
-  в `resources\bin` (`process.resourcesPath\bin`).
-- Приложение запускается **без asar** — все пути внутри обычной папки, никаких
-  проблем с файлами, шрифтами и tray-иконкой.
-- Рантайм Electron уже содержит собственные `LICENSE` и `LICENSES.chromium.html`.
+  в `resources\bin` (`process.resourcesPath\bin`) — рядом с exe, без абсолютных путей.
+- `bin\` и `licenses\` вынесены из asar (`extraResources`), т.к. запускать `openvpn.exe`
+  из архива нельзя.
 - Сборка **полностью портативная и строится только на локальных путях**: в коде
-  и скриптах нет абсолютных путей, exe работает из любого места (распакованный
-  архив, флешка и т.п.).
+  и скриптах нет абсолютных путей, exe работает из любого места (флешка, папка и т.п.).
+
+## Почему exe такой большой
+
+Внутри exe лежит весь рантайм **Electron = Chromium** (~100 МБ «на диске»).
+Это цена десктоп-фреймворка: те же ~70–90 МБ у любого Electron-приложения
+(VS Code, Slack, Discord). Уменьшается только сжатием до **~74 МБ** в один файл.
+Если нужен по-настоящему лёгкий клиент — стоит рассмотреть **Tauri** (использует
+WebView2 системы, ~5–10 МБ), но это перенос интерфейса на Rust.
 
 ## Что требуется для сборки
 
 - **Node.js 20+** (проверено: Node v24, npm 11). https://nodejs.org/
 - **npm** — идёт вместе с Node.
-- **Сеть** нужна только при первом запуске (скачивание Electron). Если `node_modules`
-  уже установлены, сборка проходит **полностью офлайн**.
+- **Сеть нужна только при первом запуске**: npm скачает зависимость `electron-builder`,
+  а она — архив Electron и сборщик NSIS (кэшируются в `%LOCALAPPDATA%\electron-builder\Cache`).
+  Все последующие сборки проходят **полностью офлайн**.
 
 ## Лицензии встроенных компонентов
 
@@ -131,15 +141,16 @@ build.bat
 1. проверит наличие Node.js/npm и `bin\openvpn.exe`;
 2. при необходимости установит npm-зависимости (`npm install`);
 3. прогонит юнит-тесты и интеграционный тест движка;
-4. соберёт `dist\MrOpenVPNClient\` (рантайм + `resources\app` + `resources\bin`);
-5. упакует всё в `dist\MrOpenVPNClient-<версия>-win-x64.zip`.
+4. соберёт одиночный portable-EXE (`npx electron-builder --win portable`).
 
-Любой сбой тестов или копирования останавливает сборку с кодом ошибки.
+Любой сбой тестов или упаковки останавливает сборку с кодом ошибки.
 Запускать можно из любого места; пути внутри скрипта — относительно корня проекта.
 В конце скрипт делает **паузу** и печатает полный путь к собранному
-`MrOpenVPNClient.exe` и архиву.
+`MrOpenVPNClient-<версия>-portable.exe` и его размер.
 
-Опции: `build.bat` параметров не требует.
+Только portable-EXE: `npm run build:win` (эквивалентно шагу 4); также можно собрать
+и установщик NSIS (`electron-builder --win nsis`) — оба варианта настроены
+в `package.json`.
 
 ## Как устроено приложение
 
@@ -183,12 +194,10 @@ CONNECTING и корректное завершение. Запускается 
 ## Проверка результата
 
 ```powershell
-# 1. Портативная версия запускается
-.\dist\MrOpenVPNClient\MrOpenVPNClient.exe
+# 1. Одиночный exe запускается из любого места
+.\dist\MrOpenVPNClient-1.0.0-portable.exe
 
-# 2. Архив распаковывается и работает оттуда же
-Expand-Archive .\dist\MrOpenVPNClient-1.0.0-win-x64.zip -DestinationPath .\_unpack
-
-# 3. Внутри есть все лицензии
-Get-ChildItem .\dist\MrOpenVPNClient\resources\app\licenses
+# 2. Лицензии внутри exe-сборки (в распакованном виде — папка win-unpacked)
+Get-ChildItem .\dist\win-unpacked\resources\licenses
+Get-ChildItem .\dist\win-unpacked\resources\bin
 ```

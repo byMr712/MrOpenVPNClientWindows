@@ -7,15 +7,47 @@
     "start": "electron .",
     "test": "electron tests/unit.js",
     "test:engine": "electron tests/engine.js",
-    "icons": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/make-icon.ps1"
+    "icons": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/make-icon.ps1",
+    "build:win": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.mr712.mropenvpn",
+    "productName": "MrOpenVPNClient",
+    "asar": true,
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json",
+      "LICENSE",
+      "NOTICE"
+    ],
+    "extraResources": [
+      { "from": "bin", "to": "bin" },
+      { "from": "licenses", "to": "licenses" }
+    ],
+    "win": {
+      "target": [
+        { "target": "portable", "arch": ["x64"] },
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "assets/icon.png",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.exe"
+    },
+    "nsis": {
+      "oneClick": true,
+      "createDesktopShortcut": true,
+      "artifactName": "${productName}-${version}-setup.exe"
+    }
   },
   "author": "Mr712",
   "license": "GPL-3.0",
   "devDependencies": {
-    "electron": "^33.2.0"
-  },
-  "dependencies": {
-    "@fontsource/roboto": "^5.1.0"
+    "@fontsource/roboto": "^5.1.0",
+    "electron": "^33.2.0",
+    "electron-builder": "^26.15.3"
   },
   "allowScripts": {
     "electron@33.4.11": true

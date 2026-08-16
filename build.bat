@@ -31,80 +31,57 @@ if not defined VER set "VER=1.0.0"
 echo  Building version %VER%
 
 rem -------- dependencies --------
-if not exist "node_modules\electron\dist\electron.exe" (
-  echo  [1/5] Installing npm dependencies...
+if not exist "node_modules\electron-builder" (
+  echo  [1/4] Installing npm dependencies... first run downloads Electron + NSIS
   call npm install --no-audit --no-fund
   if errorlevel 1 (
     echo  [ERROR] npm install failed.
     exit /b 1
   )
 ) else (
-  echo  [1/5] Dependencies already installed, skipping npm install.
+  echo  [1/4] Dependencies already installed, skipping npm install.
 )
 
 rem -------- tests --------
-echo  [2/5] Running unit tests...
+echo  [2/4] Running unit tests...
 call npm test
 if errorlevel 1 (
   echo  [ERROR] Unit tests failed.
   exit /b 1
 )
-echo  [3/5] Running engine integration test...
+echo  [3/4] Running engine integration test...
 call npm run test:engine
 if errorlevel 1 (
   echo  [ERROR] Engine integration test failed.
   exit /b 1
 )
 
-rem -------- package --------
-set "OUT=%ROOT%dist\%APPNAME%"
-set "APPDIR=%OUT%\resources\app"
-echo  [4/5] Packaging portable build to %OUT%
-if exist "%OUT%" rmdir /s /q "%OUT%"
-mkdir "%OUT%"
+rem -------- build portable exe --------
+echo  [4/4] Building single-file portable EXE (electron-builder)...
+if exist "dist\%APPNAME%-%VER%-portable.exe" del /q "dist\%APPNAME%-%VER%-portable.exe"
+call npx electron-builder --win portable
 if errorlevel 1 (
-  echo  [ERROR] Cannot create output folder.
+  echo  [ERROR] electron-builder failed. The first run needs internet to download
+  echo         Electron and NSIS; later runs work offline.
   exit /b 1
 )
 
-rem electron runtime
-xcopy "node_modules\electron\dist" "%OUT%" /e /i /q /y >nul
-if errorlevel 1 (
-  echo  [ERROR] Failed to copy Electron runtime.
+rem -------- result --------
+set "EXE=%ROOT%dist\%APPNAME%-%VER%-portable.exe"
+if not exist "%EXE%" (
+  echo  [ERROR] Output exe not found: %EXE%
   exit /b 1
 )
-
-rem app launcher
-if exist "%OUT%\electron.exe" (
-  move /y "%OUT%\electron.exe" "%OUT%\%APPNAME%.exe" >nul
-)
-del /q "%OUT%\resources\default_app.asar" 2>nul
-
-rem application itself (runs un-packed, no asar)
-mkdir "%APPDIR%"
-xcopy "src" "%APPDIR%\src" /e /i /q /y >nul
-xcopy "assets" "%APPDIR%\assets" /e /i /q /y >nul
-copy /y "package.json" "%APPDIR%\package.json" >nul
-copy /y "LICENSE" "%APPDIR%\LICENSE" >nul
-copy /y "NOTICE" "%APPDIR%\NOTICE" >nul
-xcopy "licenses" "%APPDIR%\licenses" /e /i /q /y >nul
-
-rem OpenVPN runtime + drivers
-xcopy "bin" "%OUT%\resources\bin" /e /i /q /y >nul
-
-rem -------- archive --------
-echo  [5/5] Creating ZIP archive...
-powershell -NoProfile -Command "Compress-Archive -Path '%OUT%' -DestinationPath '%ROOT%dist\%APPNAME%-%VER%-win-x64.zip' -Force"
-if errorlevel 1 (
-  echo  [WARN] ZIP creation failed; the portable folder is still available.
-)
+for %%A in ("%EXE%") do set "SZ=%%~zA"
+set /a "MB=%SZ%/1048576"
 
 echo.
 echo  Build OK.
 echo.
-echo    Portable EXE : %OUT%\%APPNAME%.exe
-echo    Archive      : %ROOT%dist\%APPNAME%-%VER%-win-x64.zip
+echo    Portable EXE : %EXE%
+echo    Size         : %MB% MB
 echo.
+echo  This is a single self-contained file - copy it anywhere and run it.
 echo  Press any key to close this window...
 pause >nul
 endlocal
