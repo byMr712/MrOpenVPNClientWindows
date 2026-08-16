@@ -47,16 +47,8 @@ class VpnEngine extends EventEmitter {
   }
 
   openVpnPath() {
-    const candidates = [
-      path.join(this.binDir(), 'openvpn.exe'),
-      path.join(process.cwd(), 'bin', 'openvpn.exe'),
-      'C:\\Program Files\\OpenVPN\\bin\\openvpn.exe',
-      'C:\\Program Files (x86)\\OpenVPN\\bin\\openvpn.exe'
-    ];
-    for (const c of candidates) {
-      if (fs.existsSync(c)) return c;
-    }
-    return null;
+    const p = path.join(this.binDir(), 'openvpn.exe');
+    return fs.existsSync(p) ? p : null;
   }
 
   openVpnInfo() {

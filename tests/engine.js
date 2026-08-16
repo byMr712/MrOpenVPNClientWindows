@@ -24,25 +24,22 @@ app.whenReady().then(async () => {
     logs.push(e.message);
   });
 
-  const desktop = 'C:/Users/' + process.env.USERNAME + '/Desktop/TheHome.ovpn';
-  let profile;
-  if (fs.existsSync(desktop)) {
-    const parsed = parseConfig(fs.readFileSync(desktop, 'utf8'));
-    profile = { id: 'engine-test', name: 'TheHome', config: parsed.config };
-  } else {
-    profile = {
-      id: 'engine-test',
-      name: 'Synthetic',
-      config: [
+  const local = path.join(__dirname, '..', 'testdata', 'TheHome.ovpn');
+  const raw = fs.existsSync(local)
+    ? fs.readFileSync(local, 'utf8')
+    : [
         'dev tun',
         'remote 10.255.255.1 1194',
         'proto udp',
         'connect-retry 1',
         'connect-retry-max 1',
-        'auth-user-pass'
-      ].join('\n')
-    };
-  }
+        'auth-user-pass',
+        'pull',
+        'tls-client',
+        'peer-fingerprint 00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00'
+      ].join('\n');
+  const parsed = parseConfig(raw);
+  const profile = { id: 'engine-test', name: 'Synthetic', config: parsed.config };
 
   const ovpnPath = engine.openVpnPath();
   const results = [];

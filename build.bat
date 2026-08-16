@@ -101,7 +101,10 @@ if errorlevel 1 (
 
 echo.
 echo  Build OK.
-echo    Portable : %OUT%\%APPNAME%.exe
-echo    Archive  : %ROOT%dist\%APPNAME%-%VER%-win-x64.zip
 echo.
+echo    Portable EXE : %OUT%\%APPNAME%.exe
+echo    Archive      : %ROOT%dist\%APPNAME%-%VER%-win-x64.zip
+echo.
+echo  Press any key to close this window...
+pause >nul
 endlocal
