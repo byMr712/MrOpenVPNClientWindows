@@ -86,6 +86,9 @@ Key facts:
 - The app runs **without asar** — every path is inside a plain folder, so there are
   no issues with files, fonts or the tray icon.
 - The Electron runtime already contains its own `LICENSE` and `LICENSES.chromium.html`.
+- The build is **fully portable and based on local paths only**: there are no
+  absolute paths in the code or scripts, and the exe works from anywhere (an
+  unpacked archive, a USB stick, etc.).
 
 ## Build requirements
 
@@ -132,6 +135,10 @@ The script will:
 
 Any test or copy failure stops the build with a non-zero exit code.
 It can be run from anywhere; paths inside the script are relative to the project root.
+At the end the script **pauses** and prints the full path of the built
+`MrOpenVPNClient.exe` and the archive.
+
+Options: `build.bat` takes no parameters.
 
 ## How the app works
 
@@ -164,6 +171,12 @@ The integration test runs the real `openvpn.exe`, connects to the management
 interface, verifies the password prompt, sends credentials, reaches the
 CONNECTING state and shuts down cleanly. It runs without administrator rights
 (only the management protocol is exercised; no adapter is created).
+
+The config for the integration test is taken locally: if `testdata\TheHome.ovpn`
+exists in the project root, the test uses it; otherwise it uses a synthetic
+config (with `pull`, `tls-client` and `peer-fingerprint`, which OpenVPN 2.6
+requires) that also brings the engine to the password prompt. No paths outside
+the project.
 
 ## Verifying the result
 
