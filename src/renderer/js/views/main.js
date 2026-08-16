@@ -77,7 +77,7 @@ Views['main'] = {
 
     root.appendChild(
       UI.h('div', { class: 'topbar' },
-        UI.h('button', { class: 'icon-btn', onclick: () => App.openDrawer() }, UI.icon('menu', 24))
+        UI.h('button', { class: 'icon-btn menu-btn', onclick: () => App.openDrawer() }, UI.icon('menu', 24))
       )
     );
     const page = UI.h('div', { class: 'page' }, statusCard, copyBtn, profilesTitle, addBtn, list);

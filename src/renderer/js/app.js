@@ -26,6 +26,10 @@ const App = {
       }
     });
 
+    window.addEventListener('resize', () => {
+      if (window.innerWidth >= 720) this.closeDrawer();
+    });
+
     window.api.onState((s) => {
       this.data.vpn = s;
       if (this.current === 'main') this.render();
@@ -52,6 +56,8 @@ const App = {
     window.api.onNeedPassword((p) => {
       Dialogs.showCredentials(p);
     });
+
+    document.getElementById('drawerScrim').addEventListener('click', () => this.closeDrawer());
   },
 
   render() {

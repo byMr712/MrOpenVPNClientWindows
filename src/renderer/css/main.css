@@ -692,6 +692,45 @@ button {
   margin-top: auto;
 }
 
+/* ---- responsive: transform into desktop layout on wide windows ---- */
+
+@media (min-width: 720px) {
+  #app {
+    width: 100%;
+    max-width: none;
+    display: flex;
+  }
+
+  #view {
+    position: static;
+    flex: 1;
+    min-width: 0;
+  }
+
+  #drawerScrim {
+    display: none;
+  }
+
+  #drawer {
+    position: static;
+    transform: none;
+    order: -1;
+    width: 280px;
+    flex: none;
+  }
+
+  .menu-btn {
+    display: none;
+  }
+
+  .topbar,
+  .page {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
 /* ---- dialog ---- */
 
 .dialog-scrim {
