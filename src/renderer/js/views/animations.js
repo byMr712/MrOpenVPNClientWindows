@@ -7,13 +7,7 @@ Views['animations'] = {
 
     const page = UI.h('div', { class: 'page' });
 
-    const preview = UI.h(
-      'div',
-      { class: 'preview-card', style: 'padding:32px;display:flex;align-items:center;justify-content:center' },
-      UI.h('div', { class: 'text-title-medium' }, 'Preview')
-    );
-    page.appendChild(preview);
-    startOutlineAnim(preview, current, { accent: themes.accentColor, idle: idleOutline(), width: 2 });
+    const preview = UI.h('div', { class: 'status-card' });
 
     const options = [
       { key: '', label: i18n.t('none') },
@@ -40,6 +34,9 @@ Views['animations'] = {
         )
       );
     }
+
+    page.appendChild(preview);
+    startOutlineAnim(preview, current, { accent: themes.accentColor, idle: idleOutline(), width: 2 });
 
     root.appendChild(
       UI.h('div', { class: 'topbar' },

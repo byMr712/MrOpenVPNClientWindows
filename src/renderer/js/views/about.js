@@ -11,7 +11,7 @@ function showAboutDialog() {
   );
 
   UI.showDialog({
-    title: i18n.t('app_name'),
+    title: 'MrOpenVPN Client For Windows',
     small: true,
     body: UI.h(
       'div',

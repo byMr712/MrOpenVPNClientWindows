@@ -24,6 +24,8 @@ Views['main'] = {
 
     const addBtn = UI.h('button', { class: 'btn-outlined mt-8', onclick: () => importProfile() }, i18n.t('add_profile'));
 
+    const profilesTitle = UI.h('div', { class: 'text-title-medium profiles-title' }, i18n.t('profiles'));
+
     const list = UI.h('div', {});
     for (const p of profiles) {
       const isThisActive = isActive && activeProfile.id === p.id;
@@ -54,11 +56,10 @@ Views['main'] = {
 
     root.appendChild(
       UI.h('div', { class: 'topbar' },
-        UI.h('button', { class: 'icon-btn', onclick: () => App.openDrawer() }, UI.icon('menu', 24)),
-        UI.h('div', { class: 'topbar-title text-title-medium' }, i18n.t('app_name'))
+        UI.h('button', { class: 'icon-btn', onclick: () => App.openDrawer() }, UI.icon('menu', 24))
       )
     );
-    const page = UI.h('div', { class: 'page' }, statusCard, copyBtn, addBtn, list);
+    const page = UI.h('div', { class: 'page' }, statusCard, copyBtn, profilesTitle, addBtn, list);
     root.appendChild(page);
   }
 };

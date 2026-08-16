@@ -73,7 +73,7 @@ const STRINGS = {
     accent_custom_hint: 'Custom color: HEX (e.g. #1E88E5 or 1E88E5)',
     theme_default_black: 'Black - default',
     theme_default_black_desc: 'Standard dark theme, no effects',
-    theme_default_white: 'White - default',
+    theme_default_white: 'White - Default',
     theme_default_white_desc: 'Standard light theme, no effects',
     theme_neon_name: 'Neon Grid',
     theme_neon_desc: 'Pure black, cyan and magenta, sharp lines, wide connect bar',

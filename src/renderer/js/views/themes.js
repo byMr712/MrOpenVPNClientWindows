@@ -9,7 +9,8 @@ Views['themes'] = {
     const current = s.experimentalTheme || (s.lightTheme ? 'default_white' : 'default_black');
 
     const options = [
-      { key: '', name: i18n.t('theme_default_black'), desc: i18n.t('theme_default_black_desc'), light: false, accent: '#FFFFFF' }
+      { key: '', name: i18n.t('theme_default_black'), desc: i18n.t('theme_default_black_desc'), light: false, accent: '#FFFFFF' },
+      { key: 'default_white', name: i18n.t('theme_default_white'), desc: i18n.t('theme_default_white_desc'), light: true, accent: '#000000' }
     ];
     for (const t of EXPERIMENTAL_THEMES) {
       if (!t.key) continue;
