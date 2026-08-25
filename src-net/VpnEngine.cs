@@ -154,7 +154,9 @@ public class VpnEngine
             var authPath = Path.Combine(_tempDir, "auth.txt");
             var logPath = Path.Combine(_tempDir, "openvpn.log");
 
-            File.WriteAllText(authPath, $"{creds.Login}\n{creds.Password}\n", Encoding.UTF8);
+            var cleanLogin = (creds.Login ?? "").Trim('\r', '\n');
+            var cleanPassword = (creds.Password ?? "").Trim('\r', '\n');
+            File.WriteAllText(authPath, $"{cleanLogin}\n{cleanPassword}\n", new UTF8Encoding(false));
 
             var authFile = authPath.Replace('\\', '/');
             var logFile = logPath.Replace('\\', '/');
