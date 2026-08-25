@@ -9,7 +9,9 @@
     "test:engine": "electron tests/engine.js",
     "test:audit": "electron tests/comprehensive_audit.js",
     "icons": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/make-icon.ps1",
-    "build:win": "electron-builder --win"
+    "build:win": "electron-builder --win",
+    "build:native": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-native.ps1",
+    "build:native:standalone": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-native.ps1 -SelfContained"
   },
   "build": {
     "appId": "com.mr712.mropenvpn",

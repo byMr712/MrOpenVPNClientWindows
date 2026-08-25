@@ -97,14 +97,26 @@ Key facts:
   absolute paths in the code or scripts, and the exe works from anywhere (a USB
   stick, any folder, etc.).
 
-## Why the exe is so large
+## Two Application Editions
 
-Inside the exe there is the entire **Electron runtime = Chromium** (~100 MB on
-disk). This is the price of a desktop framework: any Electron app is this size
-(VS Code, Slack, Discord). It only gets compressed down to **~71 MB** as a single
-portable file (~78 MB for the NSIS installer). If you want a truly lightweight
-client, consider **Tauri** (uses the
-system WebView2, ~5–10 MB), but that means reimplementing the UI in Rust.
+| Edition | Stack | EXE Size | Highlights |
+|---|---|---|---|
+| **Native WebView2 Edition** | C# .NET 8 / WinForms + WebView2 | **~8.8 MB** | Ultra-lightweight, instant start, uses Windows system Edge WebView2 |
+| **Electron Edition** | Electron 33 + Node.js | **~74.7 MB** | 100% self-contained bundled Chromium |
+
+### Building Native WebView2 Edition (~8.8 MB):
+```bat
+npm run build:native
+:: or directly via PowerShell:
+powershell -ExecutionPolicy Bypass -File scripts\build-native.ps1
+```
+The output binary will be generated at `dist-native\MrOpenVPNClient.exe`.
+
+### Building Electron Edition (~74.7 MB):
+```bat
+build.bat
+:: or npm run build:win
+```
 
 ## Build requirements
 

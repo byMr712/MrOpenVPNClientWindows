@@ -95,14 +95,26 @@ MrOpenVPNClient\
 - Сборка **полностью портативная и строится только на локальных путях**: в коде
   и скриптах нет абсолютных путей, exe работает из любого места (флешка, папка и т.п.).
 
-## Почему exe такой большой
+## Две редакции приложения
 
-Внутри exe лежит весь рантайм **Electron = Chromium** (~100 МБ «на диске»).
-Это цена десктоп-фреймворка: те же ~70–90 МБ у любого Electron-приложения
-(VS Code, Slack, Discord). Уменьшается только сжатием до **~71 МБ** в один
-portable-файл (~78 МБ у установщика NSIS).
-Если нужен по-настоящему лёгкий клиент — стоит рассмотреть **Tauri** (использует
-WebView2 системы, ~5–10 МБ), но это перенос интерфейса на Rust.
+| Редакция | Стек | Размер EXE | Особенности |
+|---|---|---|---|
+| **Native WebView2 Edition** | C# .NET 8 / WinForms + WebView2 | **~8.8 МБ** | Сверхлегкий, быстрый старт, использует системный Edge WebView2 |
+| **Electron Edition** | Electron 33 + Node.js | **~74.7 МБ** | 100% автономный, встроенный Chromium |
+
+### Сборка Native WebView2 Edition (~8.8 МБ):
+```bat
+npm run build:native
+:: или напрямую через PowerShell:
+powershell -ExecutionPolicy Bypass -File scripts\build-native.ps1
+```
+Результат сборки находится в папке `dist-native\MrOpenVPNClient.exe`.
+
+### Сборка Electron Edition (~74.7 МБ):
+```bat
+build.bat
+:: или npm run build:win
+```
 
 ## Что требуется для сборки
 

@@ -55,6 +55,14 @@ $outDir = Join-Path $PSScriptRoot "..\assets"
 $outFile = Join-Path $outDir "icon.png"
 $bmp.Save($outFile, [System.Drawing.Imaging.ImageFormat]::Png)
 
+$icoFile = Join-Path $outDir "icon.ico"
+$hIcon = $bmp.GetHicon()
+$icon = [System.Drawing.Icon]::FromHandle($hIcon)
+$fs = [System.IO.File]::OpenWrite($icoFile)
+$icon.Save($fs)
+$fs.Close()
+$icon.Dispose()
+
 $g.Dispose()
 $bgBrush.Dispose()
 $fgBrush.Dispose()
@@ -62,4 +70,4 @@ $bgPath.Dispose()
 $shield.Dispose()
 $bmp.Dispose()
 
-Write-Output "saved: $outFile"
+Write-Output "saved: $outFile and $icoFile"

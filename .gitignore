@@ -1,6 +1,9 @@
 node_modules/
 dist/
+dist-*/
 out/
+src-net/bin/
+src-net/obj/
 *.log
 .DS_Store
 Thumbs.db
