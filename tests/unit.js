@@ -52,6 +52,29 @@ app.whenReady().then(() => {
   const withIf = parser.parseConfig('dev tun\nifconfig 10.5.5.2 10.5.5.1\nremote a.b 1194');
   check('parser: keeps existing ifconfig', withIf.ifconfigAdded === false && /ifconfig 10\.5\.5\.2/.test(withIf.config));
 
+  const dangerousConfig = [
+    'client',
+    'dev tun',
+    'remote vpn.example.com 1194',
+    'script-security 2',
+    'up "powershell -enc ..."',
+    'down "cmd /c calc.exe"',
+    'plugin malicious.dll',
+    '<ca>',
+    'CERT_DATA',
+    '  </ca>',
+    'cipher AES-256-GCM'
+  ].join('\n');
+  const sanitized = parser.parseConfig(dangerousConfig);
+  check(
+    'parser: filters dangerous directives',
+    !/script-security/i.test(sanitized.config) &&
+    !/up\s+"/i.test(sanitized.config) &&
+    !/down\s+"/i.test(sanitized.config) &&
+    !/plugin\s+/i.test(sanitized.config) &&
+    /cipher AES-256-GCM/i.test(sanitized.config)
+  );
+
   // ---- store ----
   store.resetAll();
   check('store: reset gives defaults', store.getSettings().language === 'en');

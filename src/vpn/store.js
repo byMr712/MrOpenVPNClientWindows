@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { app } = require('electron');
+const { app, safeStorage } = require('electron');
 const crypto = require('crypto');
 
 const DEFAULTS = {
@@ -34,6 +34,34 @@ function uuid() {
   return crypto.randomUUID();
 }
 
+function encryptSecret(val) {
+  if (!val || typeof val !== 'string') return '';
+  try {
+    if (safeStorage && safeStorage.isEncryptionAvailable && safeStorage.isEncryptionAvailable()) {
+      return 'enc:' + safeStorage.encryptString(val).toString('base64');
+    }
+  } catch (e) {
+    // fallback if encryption fails
+  }
+  return val;
+}
+
+function decryptSecret(val) {
+  if (!val || typeof val !== 'string') return '';
+  if (val.startsWith('enc:')) {
+    try {
+      if (safeStorage && safeStorage.isEncryptionAvailable && safeStorage.isEncryptionAvailable()) {
+        const buf = Buffer.from(val.slice(4), 'base64');
+        return safeStorage.decryptString(buf);
+      }
+    } catch (e) {
+      console.error('Failed to decrypt secret:', e);
+      return '';
+    }
+  }
+  return val;
+}
+
 function ensureFile() {
   if (!filePath) {
     filePath = path.join(app.getPath('userData'), 'state.json');
@@ -44,9 +72,19 @@ function ensureFile() {
 }
 
 function save() {
-  if (!filePath) return;
+  if (!filePath || !state) return;
   try {
-    fs.writeFileSync(filePath, JSON.stringify(state, null, 2), 'utf8');
+    const dataToSave = {
+      profiles: state.profiles.map((p) => Object.assign({}, p, { password: encryptSecret(p.password) })),
+      users: {},
+      profileOrder: state.profileOrder,
+      lastProfileUuid: state.lastProfileUuid,
+      settings: state.settings
+    };
+    for (const [login, pwd] of Object.entries(state.users)) {
+      dataToSave.users[login] = encryptSecret(pwd);
+    }
+    fs.writeFileSync(filePath, JSON.stringify(dataToSave, null, 2), 'utf8');
   } catch (e) {
     console.error('store save failed:', e);
   }
@@ -57,9 +95,18 @@ function load() {
   const raw = fs.readFileSync(filePath, 'utf8');
   try {
     const parsed = JSON.parse(raw);
+    const profiles = Array.isArray(parsed.profiles)
+      ? parsed.profiles.map((p) => Object.assign({}, p, { password: decryptSecret(p.password) }))
+      : [];
+    const users = {};
+    if (parsed.users && typeof parsed.users === 'object') {
+      for (const [login, pwd] of Object.entries(parsed.users)) {
+        users[login] = decryptSecret(pwd);
+      }
+    }
     state = {
-      profiles: Array.isArray(parsed.profiles) ? parsed.profiles : [],
-      users: parsed.users && typeof parsed.users === 'object' ? parsed.users : {},
+      profiles,
+      users,
       profileOrder: Array.isArray(parsed.profileOrder) ? parsed.profileOrder : [],
       lastProfileUuid: parsed.lastProfileUuid || null,
       settings: Object.assign({}, DEFAULTS.settings, parsed.settings || {})

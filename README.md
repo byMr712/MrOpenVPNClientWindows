@@ -204,7 +204,7 @@ CONNECTING и корректное завершение. Запускается 
 
 ```powershell
 # 1. Одиночный exe запускается из любого места
-.\dist\MrOpenVPNClient-1.1.0-portable.exe
+.\dist\MrOpenVPNClient-1.2.0-portable.exe
 
 # 2. Лицензии внутри exe-сборки (в распакованном виде — папка win-unpacked)
 Get-ChildItem .\dist\win-unpacked\resources\licenses

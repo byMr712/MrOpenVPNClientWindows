@@ -33,6 +33,24 @@ function normProto(val) {
   return m ? m[1] : null;
 }
 
+const FORBIDDEN_DIRECTIVES = new Set([
+  'up',
+  'down',
+  'route-up',
+  'route-pre-down',
+  'ipchange',
+  'client-connect',
+  'tls-verify',
+  'auth-user-pass-verify',
+  'plugin',
+  'script-security',
+  'management',
+  'management-hold',
+  'management-signal',
+  'management-log-cache',
+  'management-up-down'
+]);
+
 function parseConfig(text) {
   const lines = String(text).split(/\r?\n/);
   const out = [];
@@ -48,7 +66,7 @@ function parseConfig(text) {
     const line = raw.trimEnd();
     if (inTag) {
       out.push(line);
-      if (line === `</${inTag}>`) inTag = null;
+      if (line.trim() === `</${inTag}>`) inTag = null;
       continue;
     }
     const tagMatch = /^<([a-zA-Z0-9_-]+)>/.exec(line.trim());
@@ -61,6 +79,11 @@ function parseConfig(text) {
     if (!cleaned.trim()) continue;
     const parts = cleaned.trim().split(/\s+/);
     const key = parts[0].toLowerCase();
+
+    // Security: ignore directives that can execute arbitrary scripts/binaries
+    if (FORBIDDEN_DIRECTIVES.has(key)) {
+      continue;
+    }
 
     if (key === 'dev') {
       const val = parts[1] || '';

@@ -206,7 +206,7 @@ the project.
 
 ```powershell
 # 1. The single exe launches from anywhere
-.\dist\MrOpenVPNClient-1.1.0-portable.exe
+.\dist\MrOpenVPNClient-1.2.0-portable.exe
 
 # 2. Licenses inside the build (unpacked form — the win-unpacked folder)
 Get-ChildItem .\dist\win-unpacked\resources\licenses

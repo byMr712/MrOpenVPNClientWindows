@@ -118,16 +118,16 @@ class VpnEngine extends EventEmitter {
       const settings = store.getSettings();
       let configText = (profile.config || '')
         .split(/\r?\n/)
-        .filter((l) => !/^\s*redirect-gateway\b/i.test(l))
+        .filter((l) => !/^\s*(redirect-gateway|block-outside-dns)\b/i.test(l))
         .join('\n');
       configText += '\n';
       if (settings.fullTunnel) {
         configText += 'redirect-gateway def1\n';
+        configText += 'block-outside-dns\n';
       }
-      configText += 'windows-driver tap-windows6\n';
       configText += `auth-user-pass "${authFile}"\n`;
       configText += `log "${logFile}"\n`;
-      configText += 'script-security 2\n';
+      configText += 'script-security 0\n';
       configText += 'verb 3\n';
       fs.writeFileSync(cfgPath, configText, 'utf8');
       this.tempConfig = cfgPath;
@@ -437,8 +437,10 @@ class VpnEngine extends EventEmitter {
   }
 
   sendAuth(username, password) {
-    const safeUser = String(username).replace(/"/g, '\\"');
-    const safePass = String(password).replace(/"/g, '\\"');
+    const cleanUser = String(username).replace(/[\r\n]/g, '');
+    const cleanPass = String(password).replace(/[\r\n]/g, '');
+    const safeUser = cleanUser.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const safePass = cleanPass.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
     this.send(`password auth "${safeUser}" "${safePass}"`);
     if (this.level === LEVEL_WAITING_FOR_USER_INPUT) {
       this.setLevel(LEVEL_CONNECTING_NO_SERVER_REPLY_YET, this.profileUuid);
@@ -488,8 +490,8 @@ class VpnEngine extends EventEmitter {
   stopViaTaskkill() {
     if (!this.servicePid) return;
     try {
-      const { exec } = require('child_process');
-      exec(`taskkill /PID ${this.servicePid} /T /F`, () => {});
+      const { execFile } = require('child_process');
+      execFile('taskkill.exe', ['/PID', String(this.servicePid), '/T', '/F'], () => {});
     } catch (e) {
       // ignore
     }

@@ -80,6 +80,11 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 
+  mainWindow.webContents.on('will-navigate', (e) => {
+    e.preventDefault();
+  });
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
   });
@@ -207,7 +212,8 @@ function queryService(name) {
 }
 
 function runServiceScript(script) {
-  const inner = `-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "${script}"`;
+  const escapedScript = String(script).replace(/'/g, "''");
+  const inner = `-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "${escapedScript}"`;
   const cmd = `Start-Process -FilePath 'powershell.exe' -ArgumentList '${inner}' -Verb RunAs -Wait`;
   return new Promise((resolve, reject) => {
     execFile('powershell.exe', ['-NoProfile', '-WindowStyle', 'Hidden', '-Command', cmd], { windowsHide: true }, (err) => {
@@ -493,9 +499,17 @@ function registerIpc() {
   });
 
   ipcMain.handle('shell:openExternal', (e, url) => {
-    const { shell } = require('electron');
-    shell.openExternal(String(url));
-    return true;
+    try {
+      const parsed = new URL(String(url));
+      if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+        const { shell } = require('electron');
+        shell.openExternal(parsed.href);
+        return true;
+      }
+    } catch (err) {
+      // ignore invalid URL
+    }
+    return false;
   });
 
   ipcMain.handle('app:quit', () => {

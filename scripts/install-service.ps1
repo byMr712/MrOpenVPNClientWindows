@@ -30,7 +30,7 @@ try {
 
     New-Item -ItemType Directory -Path $binDir -Force | Out-Null
 
-    foreach ($name in @('openvpnserv.exe', 'openvpn.exe', 'libcrypto-3-x64.dll', 'libssl-3-x64.dll', 'libpkcs11-helper-1.dll', 'vcruntime140.dll', 'tapctl.exe')) {
+    foreach ($name in @('openvpnserv.exe', 'openvpn.exe', 'libcrypto-3-x64.dll', 'libssl-3-x64.dll', 'libpkcs11-helper-1.dll', 'vcruntime140.dll', 'tapctl.exe', 'wintun.dll')) {
         $src = Join-Path $srcDir $name
         if (-not (Test-Path -LiteralPath $src)) {
             throw "Missing $name in $srcDir"
@@ -49,7 +49,7 @@ try {
 
     $bin = '"' + (Join-Path $binDir 'openvpnserv.exe') + '"'
 
-    sc.exe create $svc binPath= $bin start= auto depend= "tap0901/Dhcp" | Out-Null
+    sc.exe create $svc binPath= $bin start= auto depend= "Dhcp" | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "sc create failed (exit $LASTEXITCODE)"
     }
