@@ -232,17 +232,37 @@ public class VpnEngine
             if (read == 0) break;
             ms.Write(buffer, 0, read);
             var text = Encoding.Unicode.GetString(ms.ToArray());
-            var lines = text.Split('\n');
-            if (lines.Length >= 3 && !string.IsNullOrWhiteSpace(lines[2]))
+            var lines = text.Replace("\r\n", "\n").Split('\n');
+            if (lines.Length >= 2 && !string.IsNullOrWhiteSpace(lines[0]) && !string.IsNullOrWhiteSpace(lines[1]))
             {
                 if (int.TryParse(lines[0].Trim(), System.Globalization.NumberStyles.HexNumber, null, out int errCode) &&
                     int.TryParse(lines[1].Trim(), System.Globalization.NumberStyles.HexNumber, null, out int pid))
                 {
                     if (errCode != 0 || pid <= 0)
                     {
-                        throw new InvalidOperationException($"interactive_service_error: {lines[2].Trim()}");
+                        var msg = lines.Length > 2 && !string.IsNullOrWhiteSpace(lines[2]) ? lines[2].Trim() : lines[1].Trim();
+                        throw new InvalidOperationException($"interactive_service_error: {msg}");
                     }
                     return pid;
+                }
+            }
+        }
+
+        if (ms.Length > 0)
+        {
+            var text = Encoding.Unicode.GetString(ms.ToArray());
+            var lines = text.Replace("\r\n", "\n").Split('\n');
+            if (lines.Length >= 2 && !string.IsNullOrWhiteSpace(lines[0]) && !string.IsNullOrWhiteSpace(lines[1]))
+            {
+                if (int.TryParse(lines[0].Trim(), System.Globalization.NumberStyles.HexNumber, null, out int errCode) &&
+                    int.TryParse(lines[1].Trim(), System.Globalization.NumberStyles.HexNumber, null, out int pid))
+                {
+                    if (errCode == 0 && pid > 0)
+                    {
+                        return pid;
+                    }
+                    var msg = lines.Length > 2 && !string.IsNullOrWhiteSpace(lines[2]) ? lines[2].Trim() : lines[1].Trim();
+                    throw new InvalidOperationException($"interactive_service_error: {msg}");
                 }
             }
         }
