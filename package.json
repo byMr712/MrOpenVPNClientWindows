@@ -14,6 +14,7 @@
   "build": {
     "appId": "com.mr712.mropenvpn",
     "productName": "MrOpenVPNClient",
+    "compression": "maximum",
     "asar": true,
     "files": [
       "src/**/*",
