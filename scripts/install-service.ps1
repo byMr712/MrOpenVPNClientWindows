@@ -18,6 +18,14 @@ function Write-Log {
 try {
     New-Item -ItemType Directory -Path $binDir -Force | Out-Null
 
+    # Stop service if running so binaries can be updated without file locking
+    $svcObj = Get-Service -Name $svc -ErrorAction SilentlyContinue
+    if ($svcObj -and $svcObj.Status -eq 'Running') {
+        Write-Log 'stopping running service to update files...'
+        sc.exe stop $svc | Out-Null
+        Start-Sleep -Milliseconds 1200
+    }
+
     foreach ($name in @('openvpnserv.exe', 'openvpn.exe', 'libcrypto-3-x64.dll', 'libssl-3-x64.dll', 'libpkcs11-helper-1.dll', 'vcruntime140.dll', 'tapctl.exe', 'wintun.dll')) {
         $src = Join-Path $srcDir $name
         if (-not (Test-Path -LiteralPath $src)) {
