@@ -211,6 +211,18 @@ public class VpnEngine
         return port;
     }
 
+    private static bool TryParseHex(string? s, out int result)
+    {
+        result = 0;
+        if (string.IsNullOrWhiteSpace(s)) return false;
+        var trimmed = s.Trim();
+        if (trimmed.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            trimmed = trimmed[2..];
+        }
+        return int.TryParse(trimmed, System.Globalization.NumberStyles.HexNumber, null, out result);
+    }
+
     private static async Task<int> StartViaServiceAsync(string directory, string options)
     {
         const string pipeName = "openvpn\\service";
@@ -233,18 +245,14 @@ public class VpnEngine
             ms.Write(buffer, 0, read);
             var text = Encoding.Unicode.GetString(ms.ToArray());
             var lines = text.Replace("\r\n", "\n").Split('\n');
-            if (lines.Length >= 2 && !string.IsNullOrWhiteSpace(lines[0]) && !string.IsNullOrWhiteSpace(lines[1]))
+            if (lines.Length >= 2 && TryParseHex(lines[0], out int errCode) && TryParseHex(lines[1], out int pid))
             {
-                if (int.TryParse(lines[0].Trim(), System.Globalization.NumberStyles.HexNumber, null, out int errCode) &&
-                    int.TryParse(lines[1].Trim(), System.Globalization.NumberStyles.HexNumber, null, out int pid))
+                if (errCode != 0 || pid <= 0)
                 {
-                    if (errCode != 0 || pid <= 0)
-                    {
-                        var msg = lines.Length > 2 && !string.IsNullOrWhiteSpace(lines[2]) ? lines[2].Trim() : lines[1].Trim();
-                        throw new InvalidOperationException($"interactive_service_error: {msg}");
-                    }
-                    return pid;
+                    var msg = lines.Length > 2 && !string.IsNullOrWhiteSpace(lines[2]) ? lines[2].Trim() : lines[1].Trim();
+                    throw new InvalidOperationException($"interactive_service_error: {msg}");
                 }
+                return pid;
             }
         }
 
@@ -252,18 +260,14 @@ public class VpnEngine
         {
             var text = Encoding.Unicode.GetString(ms.ToArray());
             var lines = text.Replace("\r\n", "\n").Split('\n');
-            if (lines.Length >= 2 && !string.IsNullOrWhiteSpace(lines[0]) && !string.IsNullOrWhiteSpace(lines[1]))
+            if (lines.Length >= 2 && TryParseHex(lines[0], out int errCode) && TryParseHex(lines[1], out int pid))
             {
-                if (int.TryParse(lines[0].Trim(), System.Globalization.NumberStyles.HexNumber, null, out int errCode) &&
-                    int.TryParse(lines[1].Trim(), System.Globalization.NumberStyles.HexNumber, null, out int pid))
+                if (errCode == 0 && pid > 0)
                 {
-                    if (errCode == 0 && pid > 0)
-                    {
-                        return pid;
-                    }
-                    var msg = lines.Length > 2 && !string.IsNullOrWhiteSpace(lines[2]) ? lines[2].Trim() : lines[1].Trim();
-                    throw new InvalidOperationException($"interactive_service_error: {msg}");
+                    return pid;
                 }
+                var msg = lines.Length > 2 && !string.IsNullOrWhiteSpace(lines[2]) ? lines[2].Trim() : lines[1].Trim();
+                throw new InvalidOperationException($"interactive_service_error: {msg}");
             }
         }
 
