@@ -4,11 +4,16 @@ using System.IO;
 using System.ServiceProcess;
 using System.Threading.Tasks;
 
+using System.Text.Json.Serialization;
+
 namespace MrOpenVPNClient;
 
 public class ServiceStatusResult
 {
+    [JsonPropertyName("exists")]
     public bool Exists { get; set; }
+
+    [JsonPropertyName("running")]
     public bool Running { get; set; }
 }
 

@@ -623,9 +623,15 @@ public class MainForm : Form
         OpenVpn = _engine.OpenVpnInfo()
     };
 
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false
+    };
+
     private void SendIpcResponse(int id, object? result, string? error)
     {
-        var msg = JsonSerializer.Serialize(new { type = "response", id, result, error });
+        var msg = JsonSerializer.Serialize(new { type = "response", id, result, error }, _jsonOptions);
         Invoke(() =>
         {
             if (!_webView.IsDisposed && _webView.CoreWebView2 != null)
@@ -637,7 +643,7 @@ public class MainForm : Form
 
     public void SendIpcEvent(string channel, object? payload)
     {
-        var msg = JsonSerializer.Serialize(new { type = "event", channel, payload });
+        var msg = JsonSerializer.Serialize(new { type = "event", channel, payload }, _jsonOptions);
         try
         {
             Invoke(() =>
