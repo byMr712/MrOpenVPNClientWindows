@@ -178,6 +178,11 @@ public class VpnEngine
                 sb.AppendLine("block-outside-dns");
             }
 
+            if (!Regex.IsMatch(profile.Config ?? "", @"^\s*windows-driver\b", RegexOptions.Multiline | RegexOptions.IgnoreCase))
+            {
+                sb.AppendLine("windows-driver wintun");
+            }
+
             sb.AppendLine($"auth-user-pass \"{authFile}\"");
             sb.AppendLine($"log \"{logFile}\"");
             sb.AppendLine("script-security 0");

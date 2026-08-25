@@ -125,6 +125,9 @@ class VpnEngine extends EventEmitter {
         configText += 'redirect-gateway def1\n';
         configText += 'block-outside-dns\n';
       }
+      if (!/^\s*windows-driver\b/im.test(profile.config || '')) {
+        configText += 'windows-driver wintun\n';
+      }
       configText += `auth-user-pass "${authFile}"\n`;
       configText += `log "${logFile}"\n`;
       configText += 'script-security 0\n';
