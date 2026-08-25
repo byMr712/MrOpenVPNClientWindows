@@ -1,5 +1,5 @@
 #requires -RunAsAdministrator
-# Installs the OpenVPN Interactive Service once on this machine.
+# Installs the OpenVPN Interactive Service and Wintun adapter on this machine.
 # Silent: no console output, all diagnostics go to the log file.
 
 $ErrorActionPreference = 'Stop'
@@ -16,18 +16,6 @@ function Write-Log {
 }
 
 try {
-    $svcObj = Get-Service -Name $svc -ErrorAction SilentlyContinue
-    if ($svcObj -and $svcObj.Status -eq 'Running') {
-        Write-Log 'service already running'
-        exit 0
-    }
-    if ($svcObj) {
-        Write-Log 'service exists but not running, removing'
-        sc.exe stop $svc | Out-Null
-        sc.exe delete $svc | Out-Null
-        Start-Sleep -Milliseconds 1000
-    }
-
     New-Item -ItemType Directory -Path $binDir -Force | Out-Null
 
     foreach ($name in @('openvpnserv.exe', 'openvpn.exe', 'libcrypto-3-x64.dll', 'libssl-3-x64.dll', 'libpkcs11-helper-1.dll', 'vcruntime140.dll', 'tapctl.exe', 'wintun.dll')) {
@@ -47,19 +35,38 @@ try {
     New-ItemProperty -Path 'HKLM:\SOFTWARE\OpenVPN' -Name '(default)' -Value $installDir -PropertyType String -Force | Out-Null
     Write-Log 'registry set'
 
-    $bin = '"' + (Join-Path $binDir 'openvpnserv.exe') + '"'
-
-    sc.exe create $svc binPath= $bin start= auto depend= "Dhcp" | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "sc create failed (exit $LASTEXITCODE)"
+    # Ensure Wintun network adapter exists
+    $tapctl = Join-Path $binDir 'tapctl.exe'
+    if (Test-Path $tapctl) {
+        $adapters = & $tapctl list 2>&1 | Out-String
+        if (-not ($adapters -match 'wintun|tap0901|root\\tap0901')) {
+            Write-Log 'creating wintun adapter...'
+            & $tapctl create --hwid wintun --name "OpenVPN Wintun" 2>&1 | Out-Null
+            Write-Log 'wintun adapter created'
+        } else {
+            Write-Log 'wintun or tap adapter already present'
+        }
     }
-    Write-Log 'service created'
-    sc.exe description $svc "OpenVPN Interactive Service" | Out-Null
 
-    sc.exe start $svc | Out-Null
-    Start-Sleep -Milliseconds 1000
+    $svcObj = Get-Service -Name $svc -ErrorAction SilentlyContinue
+    if (-not $svcObj) {
+        $bin = '"' + (Join-Path $binDir 'openvpnserv.exe') + '"'
+        sc.exe create $svc binPath= $bin start= auto depend= "Dhcp" | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "sc create failed (exit $LASTEXITCODE)"
+        }
+        Write-Log 'service created'
+        sc.exe description $svc "OpenVPN Interactive Service" | Out-Null
+    }
+
+    $svcObj = Get-Service -Name $svc -ErrorAction SilentlyContinue
+    if ($svcObj -and $svcObj.Status -ne 'Running') {
+        sc.exe start $svc | Out-Null
+        Start-Sleep -Milliseconds 1000
+    }
+
     if ((Get-Service -Name $svc).Status -eq 'Running') {
-        Write-Log 'service started'
+        Write-Log 'service running'
         exit 0
     }
     throw 'service failed to start'

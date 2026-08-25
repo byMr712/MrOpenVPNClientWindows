@@ -25,10 +25,28 @@ public static class ServiceHelper
         {
             using var sc = new ServiceController(name);
             var status = sc.Status;
+            bool serviceRunning = status == ServiceControllerStatus.Running;
+
+            bool adapterExists = false;
+            if (serviceRunning)
+            {
+                var nics = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
+                foreach (var nic in nics)
+                {
+                    var desc = (nic.Description ?? "").ToLowerInvariant();
+                    var n = (nic.Name ?? "").ToLowerInvariant();
+                    if (desc.Contains("wintun") || desc.Contains("tap-windows") || desc.Contains("openvpn") || n.Contains("openvpn") || n.Contains("wintun"))
+                    {
+                        adapterExists = true;
+                        break;
+                    }
+                }
+            }
+
             return new ServiceStatusResult
             {
                 Exists = true,
-                Running = status == ServiceControllerStatus.Running
+                Running = serviceRunning && adapterExists
             };
         }
         catch
