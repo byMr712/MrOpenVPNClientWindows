@@ -96,9 +96,20 @@ Function ComponentsPageShow
     GetDlgItem $1 $0 1022
     ShowWindow $1 0
 
-    ; Move 1023 ("Требуется на диске: ...") to top directly under the main header banner
+    ; Query exact inner dialog width and height in pixels
+    System::Call '*(i, i, i, i) p .r4'
+    System::Call 'user32::GetClientRect(p $0, p $4)'
+    System::Call '*$4(i .r5, i .r6, i .r7, i .r8)'
+    System::Free $4
+
+    ; Move 1023 ("Требуется на диске: ...") to top directly under header
     GetDlgItem $2 $0 1023
-    System::Call 'user32::SetWindowPos(p $2, p 0, i 0, i 4, i 300, i 15, i 0x0014)'
+    System::Call 'user32::SetWindowPos(p $2, p 0, i 0, i 0, i $7, i 18, i 0x0014)'
+
+    ; Resize 1032 (Components list / TreeView) to stretch from edge to edge
+    GetDlgItem $3 $0 1032
+    IntOp $9 $8 - 24
+    System::Call 'user32::SetWindowPos(p $3, p 0, i 0, i 22, i $7, i $9, i 0x0014)'
   ${EndIf}
 FunctionEnd
 
