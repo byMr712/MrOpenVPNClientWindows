@@ -114,13 +114,14 @@ if ($makensis) {
     Write-Host "Using NSIS compiler: $makensis" -ForegroundColor Gray
 
     # Ensure UTF-8 with BOM for .nsi files so Russian characters render perfectly without mojibake
+    $utf8Bom = [System.Text.UTF8Encoding]::new($true)
     $nsiSetup = Join-Path $rootDir "scripts\installer.nsi"
     $setupContent = Get-Content $nsiSetup -Raw -Encoding utf8
-    [System.IO.File]::WriteAllText($nsiSetup, $setupContent, [System.Text.Encoding]::UTF8)
+    [System.IO.File]::WriteAllText($nsiSetup, $setupContent, $utf8Bom)
 
     $nsiPortable = Join-Path $rootDir "scripts\portable.nsi"
     $portableContent = Get-Content $nsiPortable -Raw -Encoding utf8
-    [System.IO.File]::WriteAllText($nsiPortable, $portableContent, [System.Text.Encoding]::UTF8)
+    [System.IO.File]::WriteAllText($nsiPortable, $portableContent, $utf8Bom)
 
     # Build Setup Installer
     Write-Host "Compiling Setup Installer..." -ForegroundColor Yellow

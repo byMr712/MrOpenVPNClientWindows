@@ -30,6 +30,11 @@ RequestExecutionLevel admin
 !define MUI_UNICON "..\assets\icon.ico"
 !define MUI_ABORTWARNING
 
+; Language storage in registry for clean Uninstaller localization without mojibake
+!define MUI_LANGDLL_REGISTRY_ROOT "${PRODUCT_UNINST_ROOT_KEY}"
+!define MUI_LANGDLL_REGISTRY_KEY "${PRODUCT_UNINST_KEY}"
+!define MUI_LANGDLL_REGISTRY_VALUENAME "Installer Language"
+
 ; Welcome page
 !insertmacro MUI_PAGE_WELCOME
 
@@ -53,7 +58,7 @@ RequestExecutionLevel admin
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_UNPAGE_FINISH
 
-; Languages
+; Languages (Russian first as default)
 !insertmacro MUI_LANGUAGE "Russian"
 !insertmacro MUI_LANGUAGE "English"
 
@@ -70,6 +75,9 @@ LangString SEC_STARTMENU_NAME ${LANG_ENGLISH} "Create Start Menu shortcut"
 LangString SEC_SERVICE_NAME ${LANG_RUSSIAN} "Сразу установить службу (обязательно, но можно потом)"
 LangString SEC_SERVICE_NAME ${LANG_ENGLISH} "Install OpenVPN service now (recommended, or do it later)"
 
+LangString SEC_UNINSTALL_NAME ${LANG_RUSSIAN} "Удалить ${PRODUCT_NAME}"
+LangString SEC_UNINSTALL_NAME ${LANG_ENGLISH} "Uninstall ${PRODUCT_NAME}"
+
 LangString MSG_STOPPING ${LANG_RUSSIAN} "Остановка работающих процессов..."
 LangString MSG_STOPPING ${LANG_ENGLISH} "Stopping running processes..."
 
@@ -81,6 +89,11 @@ LangString MSG_SERVICE_OK ${LANG_ENGLISH} "OpenVPNServiceInteractive service suc
 
 LangString MSG_SERVICE_WARN ${LANG_RUSSIAN} "Предупреждение: не удалось автоматически запустить службу. Службу можно запустить позже из приложения."
 LangString MSG_SERVICE_WARN ${LANG_ENGLISH} "Warning: could not automatically start the service. You can start it later from the app."
+
+; Uninstaller language initializer
+Function un.onInit
+  !insertmacro MUI_UNGETLANGUAGE
+FunctionEnd
 
 ; Callback to customize controls on Components Page
 Function ComponentsPageShow
@@ -153,7 +166,7 @@ Section "$(SEC_STARTMENU_NAME)" SEC_STARTMENU
   SetOutPath "$INSTDIR"
   CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
   CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\assets\icon.ico" 0
-  CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}\Удалить ${PRODUCT_NAME}.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
+  CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}\$(SEC_UNINSTALL_NAME).lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
 SectionEnd
 
 Section "$(SEC_SERVICE_NAME)" SEC_SERVICE
@@ -188,7 +201,7 @@ Section "Uninstall"
   ; 4. Delete shortcuts
   Delete "$DESKTOP\${PRODUCT_NAME}.lnk"
   Delete "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk"
-  Delete "$SMPROGRAMS\${PRODUCT_NAME}\Удалить ${PRODUCT_NAME}.lnk"
+  Delete "$SMPROGRAMS\${PRODUCT_NAME}\$(SEC_UNINSTALL_NAME).lnk"
   RMDir /r "$SMPROGRAMS\${PRODUCT_NAME}"
 
   ; 5. Delete Registry keys
