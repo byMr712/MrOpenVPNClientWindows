@@ -86,11 +86,17 @@ LangString MSG_SERVICE_WARN ${LANG_ENGLISH} "Warning: could not automatically st
 Function ComponentsPageShow
   FindWindow $0 "#32770" "" $HWNDPARENT
   ${If} $0 != 0
-    ; Hide the duplicate "Выберите компоненты программы для установки" subtitle
+    ; Hide 1006, 1021, and 1022 duplicate subtitle / prompt controls
     GetDlgItem $1 $0 1006
     ShowWindow $1 0
 
-    ; Move "Требуется места на диске: ..." to top under the main header
+    GetDlgItem $1 $0 1021
+    ShowWindow $1 0
+
+    GetDlgItem $1 $0 1022
+    ShowWindow $1 0
+
+    ; Move 1023 ("Требуется на диске: ...") to top directly under the main header banner
     GetDlgItem $2 $0 1023
     System::Call 'user32::SetWindowPos(p $2, p 0, i 0, i 4, i 300, i 15, i 0x0014)'
   ${EndIf}
