@@ -2,8 +2,7 @@
 
 > **Язык:** Русский · [English](README.en.md)
 
-Desktop-клиент **MrOpenVPN Client** для Windows 10/11 — порт одноимённого
-Android-приложения на **Electron**, с тем же интерфейсом и поведением.
+Нативный desktop-клиент **MrOpenVPN Client** для Windows 10/11 (.NET 8 + WebView2) — порт одноимённого Android-приложения с тем же интерфейсом и поведением.
 В этой папке — исходники, инструменты сборки и всё необходимое для пересборки.
 
 ## Авторы
@@ -11,10 +10,9 @@ Android-приложения на **Electron**, с тем же интерфей�
 - **Android-оригинал:** [Mr712](https://github.com/byMr712?tab=repositories) —
   форк проекта **ics-openvpn** (ядро: Arne Schwabe).
 - **Windows-порт:** [Mr712](https://github.com/byMr712?tab=repositories).
-- Windows-версия — независимая реализация того же интерфейса и логики на Electron
+- Windows-версия — независимая нативная реализация интерфейса на WebView2 и логики на C# .NET 8
   (кода Android/Kotlin не содержит). VPN-движок — официальный **OpenVPN 2.6.13**
-  для Windows. Из Android-версии ничего не «переносилось» — только внешний вид,
-  набор экранов и поведение.
+  для Windows.
 
 ## Отказ от ответственности
 
@@ -25,7 +23,7 @@ Android-приложения на **Electron**, с тем же интерфей�
 - Используйте на свой страх и риск. Автор **не несёт ответственности** за потерю
   данных, сбои системы, простой или любые другие последствия использования.
 - Для подключения VPN требуются права администратора — приложение корректно
-  запрашивает их через UAC (аналогично диалогу разрешения VPN на Android).
+  взаимодействует со службой OpenVPNServiceInteractive.
 - Нет гарантий, что приложение заработает на вашем конкретном оборудовании или
   версии Windows. Поддержка предоставляется только «по возможности».
 
@@ -41,8 +39,7 @@ Android-приложения на **Electron**, с тем же интерфей�
 ## Требования
 
 - **Windows 10 / 11, x64.**
-- Для работы VPN нужен установленный **Wintun**-драйвер (wintun.dll входит в поставку
-  и устанавливается автоматически при первом подключении под администратором).
+- Для работы VPN используется **Wintun**-драйвер (`wintun.dll` входит в поставку).
 - Приложение использует собственный встроенный `openvpn.exe`, отдельная установка
   OpenVPN **не нужна**.
 
@@ -50,83 +47,32 @@ Android-приложения на **Electron**, с тем же интерфей�
 
 | Путь | Описание |
 |---|---|
-| `build.bat` | Скрипт сборки portable-EXE и NSIS-setup (все пути — относительно корня; результат в `dist\`) |
-| `src/main.js` | Main-процесс Electron: окно, трей, IPC, управление VPN-движком |
-| `src/preload.js` | contextBridge API для рендерера |
-| `src/renderer/` | Весь UI: `index.html`, `css/`, `js/`, `js/views/` |
-| `src/vpn/` | Движок: `engine.js` (management-протокол), `parser.js` (.ovpn), `store.js` (хранилище) |
-| `bin/` | Встроенный VPN-рантайм: `openvpn.exe`, DLL, `wintun.dll` |
-| `assets/` | Иконки и шрифты (Inter, subset woff2) |
-| `tests/` | Тесты: `unit.js` (парсер+хранилище), `engine.js` (интеграционный) |
-| `scripts/make-icon.ps1` | Генерация `assets/icon.png` (квадратная иконка) |
+| `src-net/` | Исходный код C# .NET 8 (MainForm, VpnEngine, VpnStore, ConfigParser, ServiceHelper) |
+| `src/renderer/` | Весь веб-UI: `index.html`, `css/`, `js/`, `js/views/` |
+| `bin/` | Встроенный VPN-рантайм: `openvpn.exe`, `openvpnserv.exe`, DLL, `wintun.dll` |
+| `assets/` | Иконки (`icon.ico`, `icon.png`) и шрифты (Inter woff2) |
+| `scripts/build-native.ps1` | Скрипт сборки нативного приложения |
+| `scripts/install-service.ps1` | Установка интерактивной службы OpenVPN |
+| `scripts/uninstall-service.ps1` | Удаление интерактивной службы OpenVPN |
+| `scripts/make-icon.ps1` | Генерация `assets/icon.png` и `assets/icon.ico` |
 | `LICENSE` | GNU GPL v3 (приложение) |
-| `NOTICE` | Атрибуция и уведомления об изменениях |
-| `licenses/` | Лицензии всех встроенных сторонних компонентов |
-| `README.md` | README на русском (по умолчанию) |
-| `README.en.md` | README на английском (выбор пользователя) |
+| `NOTICE` | Атрибуция и компоненты |
+| `licenses/` | Лицензии встроенных компонентов |
+| `README.md` | README на русском |
+| `README.en.md` | README на английском |
 
-## Структура сборки
+## Сборка приложения
 
-`build.bat` собирает два варианта:
-
-- **`dist\MrOpenVPNClient-<версия>-portable.exe`** — одиночный самодостаточный
-  файл: его можно скопировать куда угодно и запустить, рядом ничего не нужно;
-- **`dist\MrOpenVPNClient-<версия>-setup.exe`** — NSIS-установщик: регистрирует
-  OpenVPN Interactive Service, разрешает выбор папки установки и создаёт ярлыки.
-
-Внутри portable (распаковка при запуске, черновик компоновки — папка `dist\win-unpacked\`):
-
-```
-MrOpenVPNClient\
-├── MrOpenVPNClient.exe            # Electron-рантайм
-└── resources\
-    ├── app.asar                   # приложение: src, assets, package.json, LICENSE, NOTICE
-    ├── bin\                       # VPN-рантайм: openvpn.exe + DLL + wintun.dll
-    ├── licenses\                  # лицензии всех сторонних компонентов
-    ├── LICENSE                    # лицензия Electron
-    └── LICENSES.chromium.html     # лицензии Chromium
-```
-
-Ключевые факты:
-- В упакованном виде `app.isPackaged == true`, поэтому движок ищет `openvpn.exe`
-  в `resources\bin` (`process.resourcesPath\bin`) — рядом с exe, без абсолютных путей.
-- `bin\` и `licenses\` вынесены из asar (`extraResources`), т.к. запускать `openvpn.exe`
-  из архива нельзя.
-- Сборка **полностью портативная и строится только на локальных путях**: в коде
-  и скриптах нет абсолютных путей, exe работает из любого места (флешка, папка и т.п.).
-
-## Две редакции приложения
-
-| Редакция | Стек | Размер EXE | Особенности |
-|---|---|---|---|
-| **Native WebView2 Edition** | C# .NET 8 / WinForms + WebView2 | **~8.8 МБ** | Сверхлегкий, быстрый старт, использует системный Edge WebView2 |
-| **Electron Edition** | Electron 33 + Node.js | **~74.7 МБ** | 100% автономный, встроенный Chromium |
-
-### Сборка Native WebView2 Edition (~8.8 МБ):
-```bat
-npm run build:native
-:: или напрямую через PowerShell:
+```powershell
 powershell -ExecutionPolicy Bypass -File scripts\build-native.ps1
 ```
-Результат сборки находится в папке `dist-native\MrOpenVPNClient.exe`.
 
-### Сборка Electron Edition (~74.7 МБ):
-```bat
-build.bat
-:: или npm run build:win
-```
-
-## Что требуется для сборки
-
-- **Node.js 20+** (проверено: Node v24, npm 11). https://nodejs.org/
-- **npm** — идёт вместе с Node.
-- **Сеть нужна только при первом запуске**: npm скачает зависимость `electron-builder`,
-  а она — архив Electron и сборщик NSIS (кэшируются в `%LOCALAPPDATA%\electron-builder\Cache`).
-  Все последующие сборки проходят **полностью офлайн**.
+Результат сборки создаётся в папке `dist-native\MrOpenVPNClient.exe` (~8.8 МБ).
+Сборка представляет собой одиночный переносимый исполняемый файл (Single-File .NET).
 
 ## Лицензии встроенных компонентов
 
-Все файлы лицензий лежат в `licenses/` и копируются в портативную сборку:
+Все файлы лицензий лежат в `licenses/`:
 
 | Компонент (в `bin/`) | Версия | Лицензия | Файл лицензии |
 |---|---|---|---|
@@ -135,90 +81,20 @@ build.bat
 | `libpkcs11-helper-1.dll` | 1.0.0 | GPL-2.0-or-later | `LICENSE-PKCS11HELPER.txt`, `LICENSE-GPL-2.0.txt` |
 | `vcruntime140.dll` | 14.29.30037.0 | Microsoft VC++ Redistributable | `LICENSE-VCRUNTIME.txt` |
 | `wintun.dll` | 0.14.1 | GPL-2.0 | `LICENSE-WINTUN.txt`, `LICENSE-GPL-2.0.txt` |
-| Electron (рантайм) | 33.4.11 | MIT | `LICENSE-ELECTRON.txt` |
-| Inter (шрифты, `assets/fonts/`) | — | SIL OFL 1.1 (шрифт), MIT (@fontsource) | `LICENSE-INTER.txt` |
-
-Примечания:
-- **OpenVPN** — GPL-2.0 со специальным исключением на линковку с OpenSSL и на
-  линковку с Apache-2.0-библиотеками (см. `LICENSE-OPENVPN.txt`).
-- **Wintun** распространяется под GPL-2.0 (WireGuard LLC).
-- **vcruntime140.dll** — компонент Microsoft VC++ Redistributable и **не**
-  подчиняется GPL; распространяется по условиям лицензии Microsoft.
-- **OpenVPN** — товарный знак OpenVPN Inc. Проект не связан и не спонсируется
-  OpenVPN Inc.
-
-## Пересборка (portable + setup)
-
-```bat
-build.bat
-```
-
-Скрипт сам:
-1. проверит наличие Node.js/npm и `bin\openvpn.exe`;
-2. при необходимости установит npm-зависимости (`npm install`);
-3. прогонит юнит-тесты (`npm test`);
-4. прогонит интеграционный тест движка — при сбое печатает `[WARN]` и **не
-   останавливает** сборку (тесту нужны реальная сеть и OpenVPN Interactive Service);
-5. соберёт оба варианта: `npx electron-builder --win portable` и
-   `npx electron-builder --win nsis`.
-
-Сбой юнит-тестов или упаковки останавливает сборку с кодом ошибки.
-Запускать можно из любого места; пути внутри скрипта — относительно корня проекта.
-В конце скрипт делает **паузу** и печатает пути и размеры собранных exe.
-
-Обе цели доступны и напрямую: `npm run build:win` (portable, эквивалент шага 5)
-и `npx electron-builder --win nsis` — обе настроены в `package.json`.
+| Inter (шрифты, `assets/fonts/`) | — | SIL OFL 1.1 | `LICENSE-INTER.txt` |
 
 ## Как устроено приложение
 
 - **Окно «как телефон»**: контент фиксированной мобильной ширины 400px,
-  по центру растягиваемого окна (минимальный размер 360×560) — как у
-  десктоп-версии Amnezia VPN.
+  по центру растягиваемого окна (минимальный размер 360×560).
 - **Темы**: default black/white, neon, oled, paper, redline, mint + выбор
-  акцентного цвета (16 пресетов или свой HEX), акцент тинтует весь интерфейс.
+  акцентного цвета (пресеты или свой HEX).
 - **Анимации**: пульсирующая обводка статуса и выбранного профиля
-  (pulse/blink/rainbow/throb), синхронизация всех анимаций.
+  (pulse/blink/rainbow/throb).
 - **Языки**: English / Русский.
-- **Подключение**: импорт `.ovpn` → Connect → запрос прав администратора (UAC,
-  как диалог разрешения VPN на Android) → авторизация → подключение.
-- **Движок**: `openvpn.exe` запускается с management-интерфейсом
-  (`--management-query-passwords`), приложение управляет им по TCP: уровни
-  статуса, запрос логина/пароля (`auth-user-pass` без сохранённых кредов),
-  лог подключения.
-- **Маршрутизация**: настройка «Весь трафик через VPN» включена по умолчанию
-  (движку добавляется `redirect-gateway def1`). Если её отключить — через VPN идёт
-  только локальный трафик (например, `192.168.x.x`), остальной — напрямую
-  (split tunnel).
-- **Поведение**: автоподключение к последнему профилю при старте, переподключение
-  при смене сети, пауза при блокировке экрана, трей с уведомлениями.
-- На Windows движку добавляется `ifconfig 10.8.0.2 10.8.0.1` для `dev tun`
-  без явного `ifconfig` (иначе OpenVPN на Windows отказывается стартовать;
-  реальные адреса сервер присылает по `pull`).
-
-## Тесты
-
-```bat
-npm test              :: юнит-тесты парсера и хранилища (tests/unit.js)
-npm run test:engine   :: интеграционный тест движка с реальным openvpn.exe
-```
-
-Интеграционный тест запускает настоящий `openvpn.exe`, подключается к management,
-проверяет запрос пароля, отправку креденшелов, переход в состояние
-CONNECTING и корректное завершение. Запускается без прав администратора
-(проверяется только management-протокол, адаптер не создаётся).
-
-Конфиг для интеграционного теста берётся локально: если в корне проекта лежит
-`testdata\TheHome.ovpn`, тест использует его; иначе — синтетический конфиг
-(с `pull`, `tls-client` и `peer-fingerprint`, которые требует OpenVPN 2.6),
-который также доводит движок до запроса пароля. Никаких путей вне проекта.
-
-## Проверка результата
-
-```powershell
-# 1. Одиночный exe запускается из любого места
-.\dist\MrOpenVPNClient-1.2.0-portable.exe
-
-# 2. Лицензии внутри exe-сборки (в распакованном виде — папка win-unpacked)
-Get-ChildItem .\dist\win-unpacked\resources\licenses
-Get-ChildItem .\dist\win-unpacked\resources\bin
-```
+- **Движок**: `openvpn.exe` запускается через Windows Interactive Service,
+  приложение управляет им по management TCP-порту.
+- **Маршрутизация**: поддержка Full Tunnel (`redirect-gateway def1` и `block-outside-dns`)
+  и Split Tunnel.
+- **Поведение**: автоподключение, переподключение при смене сети,
+  пауза при блокировке экрана, системный трей.
