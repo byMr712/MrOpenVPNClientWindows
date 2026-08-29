@@ -22,7 +22,7 @@ merchantability, fitness for a particular purpose and non-infringement.
 - Use at your own risk. The author is **not responsible** for data loss, system
   crashes, downtime, or any other consequences of using this application.
 - Connecting the VPN requires administrator rights — the app interacts properly
-  with the OpenVPNServiceInteractive service.
+  with the `OpenVPNServiceInteractive` service.
 - There is no guarantee that the app will work on your specific hardware or
   Windows version. Support is provided on a "best effort" basis only.
 
@@ -49,10 +49,13 @@ merchantability, fitness for a particular purpose and non-infringement.
 | `src/renderer/` | The whole web UI: `index.html`, `css/`, `js/`, `js/views/` |
 | `bin/` | Bundled VPN runtime: `openvpn.exe`, `openvpnserv.exe`, DLLs, `wintun.dll` |
 | `assets/` | Icons (`icon.ico`, `icon.png`) and fonts (Inter woff2) |
-| `scripts/build-native.ps1` | Native application build script |
+| `build.bat` | One-click build script (Setup + Portable + Zip) |
+| `scripts/build-native.ps1` | Native application and NSIS installer build script |
+| `scripts/installer.nsi` | NSIS Setup installer script (folder selection, shortcuts, service) |
+| `scripts/portable.nsi` | NSIS Portable launcher script (instant cached launch) |
 | `scripts/install-service.ps1` | Installs OpenVPN Interactive Service |
 | `scripts/uninstall-service.ps1` | Uninstalls OpenVPN Interactive Service |
-| `scripts/make-icon.ps1` | Generates `assets/icon.png` and `assets/icon.ico` |
+| `scripts/make-icon.ps1` | Generates `assets/icon.png` and multi-res `assets/icon.ico` |
 | `LICENSE` | GNU GPL v3 (application) |
 | `NOTICE` | Attribution and notices |
 | `licenses/` | Licenses of bundled components |
@@ -61,12 +64,25 @@ merchantability, fitness for a particular purpose and non-infringement.
 
 ## Building the application
 
+Build everything with one click:
+```bat
+build.bat
+```
+or via PowerShell:
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\build-native.ps1
 ```
 
-The output binary is produced at `dist-native\MrOpenVPNClient.exe` (~8.8 MB).
-The build is a single portable self-contained executable (Single-File .NET).
+The output binaries are produced in the `dist/` directory:
+- **`dist\MrOpenVPNClient-1.3.0-setup.exe`** — full NSIS installer:
+  - Custom install directory choice (default: `C:\Program Files\MrOpenVPNClientWindows`);
+  - "Create Desktop shortcut" option;
+  - "Create Start Menu shortcut" option;
+  - "Install service now (recommended, or do it later)" option;
+  - Registered in Windows Apps and Features with a clean uninstaller.
+- **`dist\MrOpenVPNClient-1.3.0-portable.exe`** — ultra-fast single-file executable without installation (caches launch in LocalAppData).
+- **`dist\MrOpenVPNClient-1.3.0-portable.zip`** — classic ZIP archive containing the portable folder.
+- **`dist-native\`** — raw extracted native application folder.
 
 ## Bundled component licenses
 
@@ -94,5 +110,7 @@ All license files live in `licenses/`:
   the app controls it over a management TCP port.
 - **Routing**: Full Tunnel (`redirect-gateway def1` and `block-outside-dns`)
   and Split Tunnel support.
-- **Behaviour**: auto-connect, reconnect on network change,
-  pause on screen lock, system tray with notifications.
+- **Tray & Single-Instance Behaviour**:
+  - Closing the window minimizes the application to the system tray.
+  - Launching the shortcut while the app is running in tray immediately restores and brings the existing window to the front.
+  - Auto-connect, reconnect on network change, pause on screen lock.

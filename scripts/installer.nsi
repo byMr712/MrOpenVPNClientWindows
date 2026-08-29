@@ -1,4 +1,4 @@
-; MrOpenVPN Client Windows Installer Script
+﻿; MrOpenVPN Client Windows Installer Script
 ; Written for NSIS 3.0+
 
 !include "MUI2.nsh"
@@ -37,7 +37,6 @@ RequestExecutionLevel admin
 !insertmacro MUI_PAGE_DIRECTORY
 
 ; Components page (checkboxes)
-!define MUI_COMPONENTSPAGE_NODESC
 !insertmacro MUI_PAGE_COMPONENTS
 
 ; Instfiles page
@@ -45,7 +44,6 @@ RequestExecutionLevel admin
 
 ; Finish page
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${PRODUCT_EXE}"
-!define MUI_FINISHPAGE_RUN_TEXT "Запустить ${PRODUCT_NAME}"
 !insertmacro MUI_PAGE_FINISH
 
 ; Uninstaller pages
@@ -57,14 +55,52 @@ RequestExecutionLevel admin
 !insertmacro MUI_LANGUAGE "Russian"
 !insertmacro MUI_LANGUAGE "English"
 
+; Language strings for Sections
+LangString SEC_CORE_NAME ${LANG_RUSSIAN} "!Основная программа"
+LangString SEC_CORE_NAME ${LANG_ENGLISH} "!Core Application"
+
+LangString SEC_DESKTOP_NAME ${LANG_RUSSIAN} "Создать ярлык на рабочий стол"
+LangString SEC_DESKTOP_NAME ${LANG_ENGLISH} "Create Desktop shortcut"
+
+LangString SEC_STARTMENU_NAME ${LANG_RUSSIAN} "Создать ярлык в меню пуск"
+LangString SEC_STARTMENU_NAME ${LANG_ENGLISH} "Create Start Menu shortcut"
+
+LangString SEC_SERVICE_NAME ${LANG_RUSSIAN} "Сразу установить службу (обязательно, но можно потом)"
+LangString SEC_SERVICE_NAME ${LANG_ENGLISH} "Install OpenVPN service now (recommended, or do it later)"
+
+; Descriptions
+LangString DESC_SEC_CORE ${LANG_RUSSIAN} "Файлы программы и рантайм OpenVPN (обязательно)."
+LangString DESC_SEC_CORE ${LANG_ENGLISH} "Application files and OpenVPN runtime (required)."
+
+LangString DESC_SEC_DESKTOP ${LANG_RUSSIAN} "Создаёт ярлык приложения на рабочем столе."
+LangString DESC_SEC_DESKTOP ${LANG_ENGLISH} "Creates application shortcut on the desktop."
+
+LangString DESC_SEC_STARTMENU ${LANG_RUSSIAN} "Создаёт группу ярлыков в меню «Пуск»."
+LangString DESC_SEC_STARTMENU ${LANG_ENGLISH} "Creates shortcut group in the Start Menu."
+
+LangString DESC_SEC_SERVICE ${LANG_RUSSIAN} "Устанавливает и запускает интерактивную службу OpenVPN и драйвер Wintun для быстрого подключения без лишних запросов UAC."
+LangString DESC_SEC_SERVICE ${LANG_ENGLISH} "Installs and starts the OpenVPN Interactive Service and Wintun driver for seamless VPN connections."
+
+LangString MSG_STOPPING ${LANG_RUSSIAN} "Остановка работающих процессов..."
+LangString MSG_STOPPING ${LANG_ENGLISH} "Stopping running processes..."
+
+LangString MSG_INSTALL_SERVICE ${LANG_RUSSIAN} "Установка интерактивной службы OpenVPN..."
+LangString MSG_INSTALL_SERVICE ${LANG_ENGLISH} "Installing OpenVPN Interactive Service..."
+
+LangString MSG_SERVICE_OK ${LANG_RUSSIAN} "Служба OpenVPNServiceInteractive успешно установлена и запущена."
+LangString MSG_SERVICE_OK ${LANG_ENGLISH} "OpenVPNServiceInteractive service successfully installed and running."
+
+LangString MSG_SERVICE_WARN ${LANG_RUSSIAN} "Предупреждение: не удалось автоматически запустить службу. Службу можно запустить позже из приложения."
+LangString MSG_SERVICE_WARN ${LANG_ENGLISH} "Warning: could not automatically start the service. You can start it later from the app."
+
 ; Sections
-Section "!Основная программа" SEC_CORE
+Section "$(SEC_CORE_NAME)" SEC_CORE
   SectionIn RO
   SetOutPath "$INSTDIR"
   SetOverwrite on
 
   ; Stop running instance if any
-  DetailPrint "Остановка работающих процессов..."
+  DetailPrint "$(MSG_STOPPING)"
   ExecWait 'taskkill /F /IM "${PRODUCT_EXE}"' $0
 
   ; Copy native bundle
@@ -88,29 +124,37 @@ Section "!Основная программа" SEC_CORE
   WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "NoRepair" 1
 SectionEnd
 
-Section "Создать ярлык на рабочий стол" SEC_DESKTOP
+Section "$(SEC_DESKTOP_NAME)" SEC_DESKTOP
   SetOutPath "$INSTDIR"
   CreateShortcut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\assets\icon.ico" 0
 SectionEnd
 
-Section "Создать ярлык в меню пуск" SEC_STARTMENU
+Section "$(SEC_STARTMENU_NAME)" SEC_STARTMENU
   SetOutPath "$INSTDIR"
   CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
   CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\assets\icon.ico" 0
   CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}\Удалить ${PRODUCT_NAME}.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
 SectionEnd
 
-Section "Сразу установить службу (обязательно, но можно потом)" SEC_SERVICE
-  DetailPrint "Установка интерактивной службы OpenVPN..."
+Section "$(SEC_SERVICE_NAME)" SEC_SERVICE
+  DetailPrint "$(MSG_INSTALL_SERVICE)"
   SetOutPath "$INSTDIR"
   nsExec::ExecToLog 'powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\scripts\install-service.ps1"'
   Pop $0
   ${If} $0 != 0
-    DetailPrint "Предупреждение: не удалось автоматически запустить службу (код $0). Службу можно запустить позже из приложения."
+    DetailPrint "$(MSG_SERVICE_WARN)"
   ${Else}
-    DetailPrint "Служба OpenVPNServiceInteractive успешно установлена и запущена."
+    DetailPrint "$(MSG_SERVICE_OK)"
   ${EndIf}
 SectionEnd
+
+; Descriptions assigned to components
+!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_CORE} $(DESC_SEC_CORE)
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_DESKTOP} $(DESC_SEC_DESKTOP)
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_STARTMENU} $(DESC_SEC_STARTMENU)
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_SERVICE} $(DESC_SEC_SERVICE)
+!insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ; Uninstallation
 Section "Uninstall"

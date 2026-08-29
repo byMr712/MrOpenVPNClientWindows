@@ -1,5 +1,5 @@
-; MrOpenVPN Client Windows Portable Launcher Script
-; Creates a single-file portable executable that extracts to temp and runs cleanly.
+﻿; MrOpenVPN Client Windows Fast Portable Launcher Script
+; Caches runtime files in LocalAppData to guarantee instant (<0.5s) startup on all subsequent runs.
 
 Unicode True
 
@@ -15,8 +15,23 @@ SilentInstall silent
 Icon "..\assets\icon.ico"
 
 Section
-  InitPluginsDir
-  SetOutPath "$PLUGINSDIR\app"
+  ; Fast portable cache directory in LocalAppData
+  StrCpy $INSTDIR "$LOCALAPPDATA\MrOpenVPNClient\portable"
+  
+  ; If already extracted and current version tag matches, skip extraction for instant launch
+  IfFileExists "$INSTDIR\v${PRODUCT_VERSION}.tag" run_app
+
+  ; Extract / update bundle
+  CreateDirectory "$INSTDIR"
+  SetOutPath "$INSTDIR"
   File /r "..\dist-native\*.*"
-  ExecWait '"$PLUGINSDIR\app\${PRODUCT_EXE}"' $0
+  
+  ; Write version tag
+  FileOpen $0 "$INSTDIR\v${PRODUCT_VERSION}.tag" w
+  FileWrite $0 "${PRODUCT_VERSION}"
+  FileClose $0
+
+run_app:
+  SetOutPath "$INSTDIR"
+  Exec '"$INSTDIR\${PRODUCT_EXE}"'
 SectionEnd

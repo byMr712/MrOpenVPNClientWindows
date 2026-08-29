@@ -20,6 +20,13 @@ public class MainForm : Form
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
 
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+    private const int SW_RESTORE = 9;
+
     private readonly WebView2 _webView;
     private readonly VpnStore _store;
     private readonly VpnEngine _engine;
@@ -223,6 +230,26 @@ public class MainForm : Form
         return baseDir;
     }
 
+    public void RestoreAndShowWindow()
+    {
+        if (InvokeRequired)
+        {
+            BeginInvoke(RestoreAndShowWindow);
+            return;
+        }
+
+        Show();
+        if (WindowState == FormWindowState.Minimized)
+        {
+            WindowState = FormWindowState.Normal;
+        }
+        ShowWindowAsync(Handle, SW_RESTORE);
+        ShowInTaskbar = true;
+        BringToFront();
+        Activate();
+        SetForegroundWindow(Handle);
+    }
+
     private void ToggleShowWindow()
     {
         if (Visible && WindowState != FormWindowState.Minimized)
@@ -231,11 +258,18 @@ public class MainForm : Form
         }
         else
         {
-            Show();
-            WindowState = FormWindowState.Normal;
-            BringToFront();
-            Activate();
+            RestoreAndShowWindow();
         }
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == (int)Program.WM_SHOW_MROPENVPN)
+        {
+            RestoreAndShowWindow();
+            return;
+        }
+        base.WndProc(ref m);
     }
 
     private void RefreshTrayMenu()

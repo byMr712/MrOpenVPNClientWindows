@@ -1,13 +1,15 @@
 # Build script for MrOpenVPN Client (C# .NET + WebView2 Native Edition)
 param(
-    [string]$Configuration = "Release",
-    [switch]$SelfContained = $false
+    [string]$Configuration = "Release"
 )
 
 $ErrorActionPreference = "Stop"
 
 $rootDir = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $rootDir
+
+# Stop any running instances to avoid file locks
+Stop-Process -Name "MrOpenVPNClient*", "setup*", "portable*" -Force -ErrorAction SilentlyContinue
 
 Write-Host "==> [1/4] Ensuring application icon..." -ForegroundColor Cyan
 & (Join-Path $rootDir "scripts\make-icon.ps1")
@@ -21,14 +23,14 @@ if (-not (Test-Path $msbuild)) {
 }
 Write-Host "Using MSBuild: $msbuild" -ForegroundColor Gray
 
-$outDir = if ($SelfContained) { Join-Path $rootDir "dist-native-standalone" } else { Join-Path $rootDir "dist-native" }
+$outDir = Join-Path $rootDir "dist-native"
 if (Test-Path $outDir) {
     Get-ChildItem -Path $outDir -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 } else {
     New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 }
 
-Write-Host "==> [3/4] Building MrOpenVPN Client (.NET + WebView2)..." -ForegroundColor Cyan
+Write-Host "==> [3/4] Building MrOpenVPN Client (.NET 8 + WebView2 Single-File)..." -ForegroundColor Cyan
 $proj = Join-Path $rootDir "src-net\MrOpenVPNClient.csproj"
 $args = @(
     $proj,
@@ -36,16 +38,10 @@ $args = @(
     "-t:Publish",
     "-p:Configuration=$Configuration",
     "-p:PublishDir=$outDir\",
-    "-p:SelfContained=$($SelfContained.ToString().ToLower())",
+    "-p:SelfContained=true",
+    "-p:RuntimeIdentifier=win-x64",
     "-p:PublishSingleFile=true"
 )
-
-if ($SelfContained) {
-    $args += "-p:RuntimeIdentifier=win-x64"
-    $args += "-p:EnableCompressionInSingleFile=true"
-} else {
-    $args += "-p:EnableCompressionInSingleFile=false"
-}
 
 & $msbuild $args
 if ($LASTEXITCODE -ne 0) {
@@ -111,12 +107,25 @@ if (-not (Test-Path $distDir)) {
     New-Item -ItemType Directory -Path $distDir -Force | Out-Null
 }
 
+# Create portable ZIP archive
+$portableZip = Join-Path $distDir "MrOpenVPNClient-1.3.0-portable.zip"
+if (Test-Path $portableZip) { Remove-Item -Force $portableZip }
+Compress-Archive -Path (Join-Path $outDir "*") -DestinationPath $portableZip -Force
+
 if ($makensis) {
     Write-Host "Using NSIS compiler: $makensis" -ForegroundColor Gray
 
+    # Ensure UTF-8 with BOM for .nsi files so Russian characters render perfectly without mojibake
+    $nsiSetup = Join-Path $rootDir "scripts\installer.nsi"
+    $setupContent = Get-Content $nsiSetup -Raw -Encoding utf8
+    [System.IO.File]::WriteAllText($nsiSetup, $setupContent, [System.Text.Encoding]::UTF8)
+
+    $nsiPortable = Join-Path $rootDir "scripts\portable.nsi"
+    $portableContent = Get-Content $nsiPortable -Raw -Encoding utf8
+    [System.IO.File]::WriteAllText($nsiPortable, $portableContent, [System.Text.Encoding]::UTF8)
+
     # Build Setup Installer
     Write-Host "Compiling Setup Installer..." -ForegroundColor Yellow
-    $nsiSetup = Join-Path $rootDir "scripts\installer.nsi"
     & $makensis $nsiSetup
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "Setup installer build failed with exit code $LASTEXITCODE"
@@ -124,7 +133,6 @@ if ($makensis) {
 
     # Build Portable Single-File EXE
     Write-Host "Compiling Portable Launcher..." -ForegroundColor Yellow
-    $nsiPortable = Join-Path $rootDir "scripts\portable.nsi"
     & $makensis $nsiPortable
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "Portable launcher build failed with exit code $LASTEXITCODE"
@@ -148,5 +156,9 @@ if (Test-Path $setupExe) {
 if (Test-Path $portableExe) {
     $portableSize = [Math]::Round(((Get-Item $portableExe).Length / 1MB), 2)
     Write-Host "  Portable EXE    : $portableExe ($portableSize MB)" -ForegroundColor Yellow
+}
+if (Test-Path $portableZip) {
+    $zipSize = [Math]::Round(((Get-Item $portableZip).Length / 1MB), 2)
+    Write-Host "  Portable ZIP    : $portableZip ($zipSize MB)" -ForegroundColor Yellow
 }
 Write-Host "  Native Folder   : $outDir ($sizeMb MB)`n" -ForegroundColor Yellow
