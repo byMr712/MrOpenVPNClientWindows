@@ -185,7 +185,14 @@ public class VpnEngine
 
             if (settings.FullTunnel)
             {
-                sb.AppendLine("redirect-gateway def1");
+                sb.AppendLine("redirect-gateway def1 bypass-dhcp");
+
+                // Route local LAN subnets through physical network gateway (LAN bypass)
+                sb.AppendLine("route 10.0.0.0 255.0.0.0 net_gateway");
+                sb.AppendLine("route 172.16.0.0 255.240.0.0 net_gateway");
+                sb.AppendLine("route 192.168.0.0 255.255.0.0 net_gateway");
+                sb.AppendLine("route 169.254.0.0 255.255.0.0 net_gateway");
+
                 if (!hasDns)
                 {
                     sb.AppendLine("dhcp-option DNS 1.1.1.1");
