@@ -38,6 +38,7 @@ RequestExecutionLevel admin
 
 ; Components page (checkboxes, without description box)
 !define MUI_COMPONENTSPAGE_NODESC
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW ComponentsPageShow
 !insertmacro MUI_PAGE_COMPONENTS
 
 ; Instfiles page
@@ -80,6 +81,20 @@ LangString MSG_SERVICE_OK ${LANG_ENGLISH} "OpenVPNServiceInteractive service suc
 
 LangString MSG_SERVICE_WARN ${LANG_RUSSIAN} "Предупреждение: не удалось автоматически запустить службу. Службу можно запустить позже из приложения."
 LangString MSG_SERVICE_WARN ${LANG_ENGLISH} "Warning: could not automatically start the service. You can start it later from the app."
+
+; Callback to customize controls on Components Page
+Function ComponentsPageShow
+  FindWindow $0 "#32770" "" $HWNDPARENT
+  ${If} $0 != 0
+    ; Hide the duplicate "Выберите компоненты программы для установки" subtitle
+    GetDlgItem $1 $0 1006
+    ShowWindow $1 0
+
+    ; Move "Требуется места на диске: ..." to top under the main header
+    GetDlgItem $2 $0 1023
+    System::Call 'user32::SetWindowPos(p $2, p 0, i 0, i 4, i 300, i 15, i 0x0014)'
+  ${EndIf}
+FunctionEnd
 
 ; Sections
 Section "$(SEC_CORE_NAME)" SEC_CORE
