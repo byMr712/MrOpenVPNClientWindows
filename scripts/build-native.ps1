@@ -65,6 +65,16 @@ if (-not (Test-Path $binDst)) {
     Copy-Item -Recurse -Force $binSrc $binDst
 }
 
+# Ensure assets with icon.ico and icon.png are copied
+$assetsSrc = Join-Path $rootDir "assets"
+$assetsDst = Join-Path $outDir "assets"
+if (-not (Test-Path $assetsDst)) {
+    New-Item -ItemType Directory -Path $assetsDst -Force | Out-Null
+}
+if (Test-Path $assetsSrc) {
+    Copy-Item -Recurse -Force (Join-Path $assetsSrc "*") $assetsDst
+}
+
 $exe = Join-Path $outDir "MrOpenVPNClient.exe"
 if (Test-Path $exe) {
     $sizeMb = [Math]::Round(((Get-Item $exe).Length / 1MB), 2)

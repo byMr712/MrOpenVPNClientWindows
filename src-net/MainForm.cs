@@ -37,16 +37,39 @@ public class MainForm : Form
         Size = new Size(400, 740);
         MinimumSize = new Size(360, 560);
         BackColor = Color.Black;
-        StartPosition = FormStartPosition.CenterScreen;
+        ShowIcon = true;
 
-        var iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets", "icon.ico");
-        if (!File.Exists(iconPath))
+        Icon? appIcon = null;
+        try
         {
-            iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "assets", "icon.ico");
+            var iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets", "icon.ico");
+            if (!File.Exists(iconPath))
+            {
+                iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "assets", "icon.ico");
+            }
+            if (File.Exists(iconPath))
+            {
+                appIcon = new Icon(iconPath);
+            }
         }
-        if (File.Exists(iconPath))
+        catch { }
+
+        if (appIcon == null)
         {
-            Icon = new Icon(iconPath);
+            try
+            {
+                var exePath = Environment.ProcessPath ?? Application.ExecutablePath;
+                if (!string.IsNullOrEmpty(exePath) && File.Exists(exePath))
+                {
+                    appIcon = Icon.ExtractAssociatedIcon(exePath);
+                }
+            }
+            catch { }
+        }
+
+        if (appIcon != null)
+        {
+            Icon = appIcon;
         }
 
         // Enable Windows dark title bar
