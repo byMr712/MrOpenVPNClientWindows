@@ -296,6 +296,7 @@ ipcMain.handle('app:online', (e, isOnline) => {
       engine.resume();
       return true;
     }
+    if (engine.isActive()) return true;
     const profile = store.getProfile(wasConnectedUuid);
     if (profile) {
       setTimeout(() => connectProfile(profile).catch(() => {}), 1000);

@@ -109,6 +109,10 @@ public class VpnEngine
 
         if (IsActive())
         {
+            if (ProfileUuid == profile.Id && Level is LEVEL_CONNECTED or LEVEL_START or LEVEL_CONNECTING_NO_SERVER_REPLY_YET or LEVEL_CONNECTING_SERVER_REPLIED)
+            {
+                return true;
+            }
             ForceStop();
         }
 

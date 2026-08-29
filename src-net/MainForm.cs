@@ -495,10 +495,13 @@ public class MainForm : Form
                     }
                     else
                     {
-                        if (_wasConnectedUuid != null && _engine.Level != VpnEngine.LEVEL_CONNECTED)
+                        if (_wasConnectedUuid != null)
                         {
-                            if (_engine.Level == VpnEngine.LEVEL_VPNPAUSED) _engine.Resume();
-                            else
+                            if (_engine.Level == VpnEngine.LEVEL_VPNPAUSED)
+                            {
+                                _engine.Resume();
+                            }
+                            else if (!_engine.IsActive())
                             {
                                 var p = _store.GetProfile(_wasConnectedUuid);
                                 if (p != null) _ = Task.Run(async () => { await Task.Delay(1000); await ConnectProfileAsync(p); });
@@ -618,8 +621,8 @@ public class MainForm : Form
         Profiles = _store.GetProfiles().Select(ProfileDto.From).ToList(),
         Users = _store.GetUsers().Select(u => new UserDto { Login = u.Login, HasPassword = !string.IsNullOrEmpty(u.Password) }).ToList(),
         Vpn = _engine.GetState(),
-        Version = "1.2.0",
-        VersionDisplay = "1.2 (2)",
+        Version = "1.3.0",
+        VersionDisplay = "1.3 (1)",
         OpenVpn = _engine.OpenVpnInfo()
     };
 

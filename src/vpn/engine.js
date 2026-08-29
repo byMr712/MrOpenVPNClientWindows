@@ -75,6 +75,9 @@ class VpnEngine extends EventEmitter {
       return Promise.reject(new Error('openvpn_not_found'));
     }
     if (this.isActive()) {
+      if (this.profileUuid === profile.id && (this.level === LEVEL_CONNECTED || this.level === LEVEL_CONNECTING_NO_SERVER_REPLY_YET || this.level === LEVEL_CONNECTING_SERVER_REPLIED || this.level === LEVEL_START)) {
+        return Promise.resolve({ ok: true });
+      }
       this.forceStop();
     }
     this.currentProfile = profile;

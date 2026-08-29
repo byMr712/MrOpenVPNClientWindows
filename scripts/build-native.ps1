@@ -23,7 +23,9 @@ Write-Host "Using MSBuild: $msbuild" -ForegroundColor Gray
 
 $outDir = if ($SelfContained) { Join-Path $rootDir "dist-native-standalone" } else { Join-Path $rootDir "dist-native" }
 if (Test-Path $outDir) {
-    Remove-Item -Recurse -Force $outDir
+    Get-ChildItem -Path $outDir -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+} else {
+    New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 }
 
 Write-Host "==> [3/4] Building MrOpenVPN Client (.NET + WebView2)..." -ForegroundColor Cyan

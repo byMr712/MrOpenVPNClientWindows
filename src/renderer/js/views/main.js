@@ -22,6 +22,7 @@ Views['main'] = {
         class: 'status-card',
         style: 'cursor:pointer',
         onclick: () => {
+          if (isConnecting) return;
           if (isActive) {
             window.api.vpnDisconnect();
             return;
@@ -62,7 +63,15 @@ Views['main'] = {
         ),
         isThisActive
           ? UI.h('button', { class: 'btn-filled', onclick: (e) => { e.stopPropagation(); window.api.vpnDisconnect(); } }, i18n.t('disconnect'))
-          : UI.h('button', { class: 'btn-filled', onclick: (e) => { e.stopPropagation(); doConnect(p); } }, i18n.t('connect'))
+          : UI.h('button', {
+              class: 'btn-filled',
+              disabled: isConnecting,
+              onclick: (e) => {
+                e.stopPropagation();
+                if (isConnecting) return;
+                doConnect(p);
+              }
+            }, i18n.t('connect'))
       );
       list.appendChild(card);
       if (isConnecting && activeProfile && activeProfile.id === p.id) {
@@ -115,27 +124,35 @@ function startOutlineAnim(el, kind, opts) {
   Animator.start(kind, el, opts);
 }
 
+let _isConnectingBusy = false;
+
 async function doConnect(profile) {
-  const st = await window.api.getServiceStatus();
-  if (st && !st.running) {
-    const agreed = await new Promise((resolve) => {
-      UI.showDialog({
-        title: i18n.t('service_confirm_title'),
-        message: i18n.t('service_confirm_message'),
-        buttons: [
-          { label: i18n.t('service_confirm_cancel'), onClick: () => resolve(false) },
-          { label: i18n.t('service_confirm_agree'), onClick: () => resolve(true) }
-        ]
+  if (_isConnectingBusy) return;
+  _isConnectingBusy = true;
+  try {
+    const st = await window.api.getServiceStatus();
+    if (st && !st.running) {
+      const agreed = await new Promise((resolve) => {
+        UI.showDialog({
+          title: i18n.t('service_confirm_title'),
+          message: i18n.t('service_confirm_message'),
+          buttons: [
+            { label: i18n.t('service_confirm_cancel'), onClick: () => resolve(false) },
+            { label: i18n.t('service_confirm_agree'), onClick: () => resolve(true) }
+          ]
+        });
       });
-    });
-    if (!agreed) return;
-  }
-  const res = await window.api.vpnConnect(profile.id);
-  if (res && res.error) {
-    if (res.error === 'openvpn_not_found') UI.showToast(i18n.t('openvpn_not_found'));
-    else if (res.error === 'interactive_service_not_running' || res.error === 'service_install_failed') UI.showToast(i18n.t('service_not_running'));
-    else if (res.error === 'cancelled') return;
-    else UI.showToast(i18n.t('vpn_start_error'));
+      if (!agreed) return;
+    }
+    const res = await window.api.vpnConnect(profile.id);
+    if (res && res.error) {
+      if (res.error === 'openvpn_not_found') UI.showToast(i18n.t('openvpn_not_found'));
+      else if (res.error === 'interactive_service_not_running' || res.error === 'service_install_failed') UI.showToast(i18n.t('service_not_running'));
+      else if (res.error === 'cancelled') return;
+      else UI.showToast(i18n.t('vpn_start_error'));
+    }
+  } finally {
+    _isConnectingBusy = false;
   }
 }
 
