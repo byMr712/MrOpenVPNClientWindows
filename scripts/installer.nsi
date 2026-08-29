@@ -170,26 +170,35 @@ SectionEnd
 
 ; Uninstallation
 Section "Uninstall"
-  ; Stop app
+  ; 1. Stop all application and OpenVPN processes
   ExecWait 'taskkill /F /IM "${PRODUCT_EXE}"' $0
+  ExecWait 'taskkill /F /IM "openvpn.exe"' $0
+  ExecWait 'taskkill /F /IM "openvpnserv.exe"' $0
 
-  ; Delete shortcuts
+  ; 2. Stop and completely remove OpenVPNServiceInteractive service
+  nsExec::ExecToLog 'sc.exe stop OpenVPNServiceInteractive'
+  Sleep 1000
+  nsExec::ExecToLog 'sc.exe delete OpenVPNServiceInteractive'
+  Sleep 500
+
+  ; 3. Remove OpenVPN service runtime files and registry
+  RMDir /r "C:\Program Files\OpenVPN"
+  DeleteRegKey HKLM "SOFTWARE\OpenVPN"
+
+  ; 4. Delete shortcuts
   Delete "$DESKTOP\${PRODUCT_NAME}.lnk"
   Delete "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk"
   Delete "$SMPROGRAMS\${PRODUCT_NAME}\Удалить ${PRODUCT_NAME}.lnk"
-  RMDir "$SMPROGRAMS\${PRODUCT_NAME}"
+  RMDir /r "$SMPROGRAMS\${PRODUCT_NAME}"
 
-  ; Delete Registry keys
+  ; 5. Delete Registry keys
   DeleteRegKey HKLM "${PRODUCT_DIR_REGKEY}"
   DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
 
-  ; Delete files
-  Delete "$INSTDIR\uninstall.exe"
-  Delete "$INSTDIR\${PRODUCT_EXE}"
-  RMDir /r "$INSTDIR\assets"
-  RMDir /r "$INSTDIR\bin"
-  RMDir /r "$INSTDIR\licenses"
-  RMDir /r "$INSTDIR\renderer"
-  RMDir /r "$INSTDIR\scripts"
-  RMDir "$INSTDIR"
+  ; 6. Clean up AppData, User Profiles, Logs, and WebView2 cache
+  RMDir /r "$APPDATA\mropenvpn-client-windows"
+  RMDir /r "$LOCALAPPDATA\MrOpenVPNClient"
+
+  ; 7. Delete all files in installation directory
+  RMDir /r "$INSTDIR"
 SectionEnd
