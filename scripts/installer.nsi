@@ -36,7 +36,8 @@ RequestExecutionLevel admin
 ; Directory page (default C:\Program Files\MrOpenVPNClientWindows)
 !insertmacro MUI_PAGE_DIRECTORY
 
-; Components page (checkboxes)
+; Components page (checkboxes, without description box)
+!define MUI_COMPONENTSPAGE_NODESC
 !insertmacro MUI_PAGE_COMPONENTS
 
 ; Instfiles page
@@ -56,8 +57,8 @@ RequestExecutionLevel admin
 !insertmacro MUI_LANGUAGE "English"
 
 ; Language strings for Sections
-LangString SEC_CORE_NAME ${LANG_RUSSIAN} "!Основная программа"
-LangString SEC_CORE_NAME ${LANG_ENGLISH} "!Core Application"
+LangString SEC_CORE_NAME ${LANG_RUSSIAN} "Основная программа"
+LangString SEC_CORE_NAME ${LANG_ENGLISH} "Core Application"
 
 LangString SEC_DESKTOP_NAME ${LANG_RUSSIAN} "Создать ярлык на рабочий стол"
 LangString SEC_DESKTOP_NAME ${LANG_ENGLISH} "Create Desktop shortcut"
@@ -67,19 +68,6 @@ LangString SEC_STARTMENU_NAME ${LANG_ENGLISH} "Create Start Menu shortcut"
 
 LangString SEC_SERVICE_NAME ${LANG_RUSSIAN} "Сразу установить службу (обязательно, но можно потом)"
 LangString SEC_SERVICE_NAME ${LANG_ENGLISH} "Install OpenVPN service now (recommended, or do it later)"
-
-; Descriptions
-LangString DESC_SEC_CORE ${LANG_RUSSIAN} "Файлы программы и рантайм OpenVPN (обязательно)."
-LangString DESC_SEC_CORE ${LANG_ENGLISH} "Application files and OpenVPN runtime (required)."
-
-LangString DESC_SEC_DESKTOP ${LANG_RUSSIAN} "Создаёт ярлык приложения на рабочем столе."
-LangString DESC_SEC_DESKTOP ${LANG_ENGLISH} "Creates application shortcut on the desktop."
-
-LangString DESC_SEC_STARTMENU ${LANG_RUSSIAN} "Создаёт группу ярлыков в меню «Пуск»."
-LangString DESC_SEC_STARTMENU ${LANG_ENGLISH} "Creates shortcut group in the Start Menu."
-
-LangString DESC_SEC_SERVICE ${LANG_RUSSIAN} "Устанавливает и запускает интерактивную службу OpenVPN и драйвер Wintun для быстрого подключения без лишних запросов UAC."
-LangString DESC_SEC_SERVICE ${LANG_ENGLISH} "Installs and starts the OpenVPN Interactive Service and Wintun driver for seamless VPN connections."
 
 LangString MSG_STOPPING ${LANG_RUSSIAN} "Остановка работающих процессов..."
 LangString MSG_STOPPING ${LANG_ENGLISH} "Stopping running processes..."
@@ -147,14 +135,6 @@ Section "$(SEC_SERVICE_NAME)" SEC_SERVICE
     DetailPrint "$(MSG_SERVICE_OK)"
   ${EndIf}
 SectionEnd
-
-; Descriptions assigned to components
-!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_CORE} $(DESC_SEC_CORE)
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_DESKTOP} $(DESC_SEC_DESKTOP)
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_STARTMENU} $(DESC_SEC_STARTMENU)
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_SERVICE} $(DESC_SEC_SERVICE)
-!insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ; Uninstallation
 Section "Uninstall"

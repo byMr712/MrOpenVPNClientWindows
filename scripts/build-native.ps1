@@ -30,7 +30,7 @@ if (Test-Path $outDir) {
     New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 }
 
-Write-Host "==> [3/4] Building MrOpenVPN Client (.NET 8 + WebView2 Single-File)..." -ForegroundColor Cyan
+Write-Host "==> [3/4] Building MrOpenVPN Client (Lightweight Native .NET + WebView2)..." -ForegroundColor Cyan
 $proj = Join-Path $rootDir "src-net\MrOpenVPNClient.csproj"
 $args = @(
     $proj,
@@ -38,9 +38,7 @@ $args = @(
     "-t:Publish",
     "-p:Configuration=$Configuration",
     "-p:PublishDir=$outDir\",
-    "-p:SelfContained=true",
-    "-p:RuntimeIdentifier=win-x64",
-    "-p:PublishSingleFile=true"
+    "-p:SelfContained=false"
 )
 
 & $msbuild $args
