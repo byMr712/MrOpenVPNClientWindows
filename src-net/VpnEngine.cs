@@ -168,8 +168,15 @@ public class VpnEngine
             var settings = _store.GetSettings();
             var configLines = (profile.Config ?? "").Replace("\r\n", "\n").Split('\n');
             var sb = new StringBuilder();
+            bool hasDns = false;
+
             foreach (var l in configLines)
             {
+                if (Regex.IsMatch(l, @"^\s*dhcp-option\s+DNS\b", RegexOptions.IgnoreCase))
+                {
+                    hasDns = true;
+                }
+
                 if (!Regex.IsMatch(l, @"^\s*(redirect-gateway|block-outside-dns)\b", RegexOptions.IgnoreCase))
                 {
                     sb.AppendLine(l);
@@ -179,6 +186,11 @@ public class VpnEngine
             if (settings.FullTunnel)
             {
                 sb.AppendLine("redirect-gateway def1");
+                if (!hasDns)
+                {
+                    sb.AppendLine("dhcp-option DNS 1.1.1.1");
+                    sb.AppendLine("dhcp-option DNS 8.8.8.8");
+                }
                 sb.AppendLine("block-outside-dns");
             }
 

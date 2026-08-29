@@ -13,7 +13,7 @@ public class AppSettings
     public bool ScreenOffPause { get; set; } = false;
 
     [JsonPropertyName("fullTunnel")]
-    public bool FullTunnel { get; set; } = true;
+    public bool FullTunnel { get; set; } = false;
 
     [JsonPropertyName("notify")]
     public bool Notify { get; set; } = true;
