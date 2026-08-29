@@ -15,11 +15,12 @@ Views['main'] = {
       level === 'LEVEL_CONNECTING_SERVER_REPLIED' ||
       level === 'LEVEL_START' ||
       level === 'LEVEL_WAITING_FOR_USER_INPUT';
+    const isConnected = level === 'LEVEL_CONNECTED';
 
     const statusCard = UI.h(
       'div',
       {
-        class: 'status-card',
+        class: 'status-card' + (isConnected ? ' connected' : ''),
         style: 'cursor:pointer',
         onclick: () => {
           if (isConnecting) return;
@@ -47,10 +48,11 @@ Views['main'] = {
     const list = UI.h('div', {});
     for (const p of profiles) {
       const isThisActive = isActive && activeProfile.id === p.id;
+      const isThisConnected = isConnected && isThisActive;
       const card = UI.h(
         'div',
         {
-          class: 'profile-card',
+          class: 'profile-card' + (isThisConnected ? ' connected' : ''),
           onclick: () => Dialogs.editProfile(p)
         },
         UI.h(

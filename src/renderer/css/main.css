@@ -231,6 +231,11 @@ button {
   cursor: pointer;
 }
 
+.status-card.connected,
+.status-card.active {
+  border: 2px solid var(--accent, var(--on-surface));
+}
+
 .status-card .text-display {
   color: var(--accent, var(--on-surface));
   text-align: center;
@@ -471,6 +476,11 @@ button {
   gap: 8px;
   padding: 12px;
   cursor: pointer;
+}
+
+.profile-card.connected,
+.profile-card.active {
+  border: 2px solid var(--accent, var(--on-surface));
 }
 .profile-card .profile-text {
   flex: 1;
