@@ -13,7 +13,7 @@ Views['themes'] = {
       { key: 'default_white', name: i18n.t('theme_default_white'), desc: i18n.t('theme_default_white_desc'), light: true, accent: '#000000' }
     ];
     for (const t of EXPERIMENTAL_THEMES) {
-      if (!t.key) continue;
+      if (!t.key || t.key === 'default_white') continue;
       options.push({
         key: t.key,
         name: i18n.t('theme_' + t.key + '_name'),
