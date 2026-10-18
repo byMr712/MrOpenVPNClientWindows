@@ -34,6 +34,7 @@ public class MainForm : Form
     private readonly ContextMenuStrip _trayMenu;
     private bool _quitting = false;
     private string? _wasConnectedUuid;
+    private bool _userInitiatedDisconnect = false;
 
     public MainForm()
     {
@@ -113,24 +114,44 @@ public class MainForm : Form
         RefreshTrayMenu();
 
         // Wire Engine Events
+        string? prevLevel = null;
         _engine.StateChanged += state =>
         {
+            var oldLevel = prevLevel;
+            prevLevel = state.Level;
+
             if (state.Level == VpnEngine.LEVEL_CONNECTED)
             {
-                _wasConnectedUuid = state.ProfileUuid;
-                ShowNotification("Connected");
+                if (oldLevel != VpnEngine.LEVEL_CONNECTED)
+                {
+                    _wasConnectedUuid = state.ProfileUuid;
+                    ShowNotification(GetLocalizedText("connected", "Connected"));
+                }
             }
             else if (state.Level is VpnEngine.LEVEL_NOTCONNECTED or VpnEngine.LEVEL_AUTH_FAILED)
             {
-                ShowNotification("Disconnected");
+                if (oldLevel == VpnEngine.LEVEL_CONNECTED || oldLevel == VpnEngine.LEVEL_VPNPAUSED)
+                {
+                    ShowNotification(GetLocalizedText("not_connected", "Disconnected"));
+                }
+                else if (state.Level == VpnEngine.LEVEL_AUTH_FAILED && oldLevel != VpnEngine.LEVEL_AUTH_FAILED)
+                {
+                    ShowNotification(GetLocalizedText("auth_failed", "Authentication failed"));
+                }
             }
             SendIpcEvent("state:changed", state);
-            Invoke(RefreshTrayMenu);
+            if (!IsDisposed && IsHandleCreated)
+            {
+                try { BeginInvoke(RefreshTrayMenu); } catch { }
+            }
         };
 
         _engine.LogReceived += entry =>
         {
-            SendIpcEvent("log:changed", entry);
+            if (_store.GetSettings().DebugMode)
+            {
+                SendIpcEvent("log:changed", entry);
+            }
         };
 
         _engine.NeedPassword += (profileId, kind) =>
@@ -290,6 +311,7 @@ public class MainForm : Form
         {
             if (active)
             {
+                _userInitiatedDisconnect = true;
                 _wasConnectedUuid = null;
                 _engine.Disconnect();
             }
@@ -323,11 +345,37 @@ public class MainForm : Form
     private void ShowNotification(string message)
     {
         if (!_store.GetSettings().Notify) return;
-        _trayIcon.ShowBalloonTip(3000, "MrOpenVPN Client", message, ToolTipIcon.Info);
+        if (InvokeRequired)
+        {
+            BeginInvoke(() => ShowNotification(message));
+            return;
+        }
+        try
+        {
+            _trayIcon.ShowBalloonTip(1500, "MrOpenVPN Client", message, ToolTipIcon.Info);
+        }
+        catch { }
+    }
+
+    private string GetLocalizedText(string key, string fallback)
+    {
+        var lang = _store.GetSettings().Language;
+        if (lang == "ru")
+        {
+            return key switch
+            {
+                "connected" => "Подключено",
+                "not_connected" => "Отключено",
+                "auth_failed" => "Ошибка авторизации",
+                _ => fallback
+            };
+        }
+        return fallback;
     }
 
     private async Task<bool> ConnectProfileAsync(VpnProfile profile)
     {
+        _userInitiatedDisconnect = false;
         bool serviceOk = await ServiceHelper.EnsureInteractiveServiceAsync();
         if (!serviceOk)
         {
@@ -420,6 +468,11 @@ public class MainForm : Form
                 {
                     var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(args[0].GetRawText()) ?? [];
                     var s = _store.SetSettings(dict);
+                    if (!s.DebugMode)
+                    {
+                        _engine.ClearLog();
+                    }
+                    _webView.CoreWebView2.Settings.AreDevToolsEnabled = s.DebugMode;
                     SendIpcEvent("settings:changed", s);
                     Invoke(RefreshTrayMenu);
                     return s;
@@ -486,6 +539,7 @@ public class MainForm : Form
                     var id = args[0].GetString() ?? "";
                     if (_engine.ProfileUuid == id)
                     {
+                        _userInitiatedDisconnect = true;
                         _wasConnectedUuid = null;
                         _engine.Disconnect();
                     }
@@ -548,11 +602,14 @@ public class MainForm : Form
                     bool isOnline = args[0].GetBoolean();
                     if (!isOnline)
                     {
-                        if (_engine.IsActive()) _wasConnectedUuid = _engine.ProfileUuid ?? _wasConnectedUuid;
+                        if (!_userInitiatedDisconnect && _engine.IsActive())
+                        {
+                            _wasConnectedUuid = _engine.ProfileUuid ?? _wasConnectedUuid;
+                        }
                     }
                     else
                     {
-                        if (_wasConnectedUuid != null)
+                        if (!_userInitiatedDisconnect && _wasConnectedUuid != null)
                         {
                             if (_engine.Level == VpnEngine.LEVEL_VPNPAUSED)
                             {
@@ -595,6 +652,7 @@ public class MainForm : Form
                 return ok ? (object)new { ok = true } : new { error = "service_uninstall_failed" };
 
             case "vpn:disconnect":
+                _userInitiatedDisconnect = true;
                 _wasConnectedUuid = null;
                 _engine.Disconnect();
                 return true;
@@ -678,8 +736,8 @@ public class MainForm : Form
         Profiles = _store.GetProfiles().Select(ProfileDto.From).ToList(),
         Users = _store.GetUsers().Select(u => new UserDto { Login = u.Login, HasPassword = !string.IsNullOrEmpty(u.Password) }).ToList(),
         Vpn = _engine.GetState(),
-        Version = "1.3.0",
-        VersionDisplay = "1.3 (1)",
+        Version = "1.4.0",
+        VersionDisplay = "1.4 (1)",
         OpenVpn = _engine.OpenVpnInfo()
     };
 

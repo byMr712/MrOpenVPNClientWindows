@@ -74,14 +74,14 @@ powershell -ExecutionPolicy Bypass -File scripts\build-native.ps1
 ```
 
 The output binaries are produced in the `dist/` directory:
-- **`dist\MrOpenVPNClient-1.3.0-setup.exe`** — full NSIS installer:
+- **`dist\MrOpenVPNClient-1.4.0-setup.exe`** — full NSIS installer:
   - Custom install directory choice (default: `C:\Program Files\MrOpenVPNClientWindows`);
   - "Create Desktop shortcut" option;
   - "Create Start Menu shortcut" option;
   - "Install service now (recommended, or do it later)" option;
   - Registered in Windows Apps and Features with a clean uninstaller.
-- **`dist\MrOpenVPNClient-1.3.0-portable.exe`** — ultra-fast single-file executable without installation (caches launch in LocalAppData).
-- **`dist\MrOpenVPNClient-1.3.0-portable.zip`** — classic ZIP archive containing the portable folder.
+- **`dist\MrOpenVPNClient-1.4.0-portable.exe`** — ultra-fast single-file executable without installation (caches launch in LocalAppData).
+- **`dist\MrOpenVPNClient-1.4.0-portable.zip`** — classic ZIP archive containing the portable folder.
 - **`dist-native\`** — raw extracted native application folder.
 
 ## Bundled component licenses

@@ -35,6 +35,7 @@ public class VpnEngine
     private TcpClient? _mgmtClient;
     private NetworkStream? _mgmtStream;
     private CancellationTokenSource? _mgmtCts;
+    private CancellationTokenSource? _disconnectCts;
     private int? _servicePid;
     private string? _tempDir;
     private string? _lastLog;
@@ -107,14 +108,12 @@ public class VpnEngine
             throw new InvalidOperationException("openvpn_not_found");
         }
 
-        if (IsActive())
+        if (IsActive() && ProfileUuid == profile.Id && Level is LEVEL_CONNECTED or LEVEL_START or LEVEL_CONNECTING_NO_SERVER_REPLY_YET or LEVEL_CONNECTING_SERVER_REPLIED)
         {
-            if (ProfileUuid == profile.Id && Level is LEVEL_CONNECTED or LEVEL_START or LEVEL_CONNECTING_NO_SERVER_REPLY_YET or LEVEL_CONNECTING_SERVER_REPLIED)
-            {
-                return true;
-            }
-            ForceStop();
+            return true;
         }
+
+        await StopCurrentProcessAsync();
 
         CurrentProfile = profile;
         ProfileUuid = profile.Id;
@@ -222,7 +221,7 @@ public class VpnEngine
             _servicePid = pid;
             Log($"OpenVPN started via interactive service (pid {pid})");
 
-            _ = ConnectManagementAsync(port);
+            _ = ConnectManagementAsync(port, pid);
         }
         catch (Exception ex)
         {
@@ -304,14 +303,20 @@ public class VpnEngine
         throw new InvalidOperationException("interactive_service_closed");
     }
 
-    private async Task ConnectManagementAsync(int port)
+    private async Task ConnectManagementAsync(int port, int expectedPid)
     {
         for (int attempt = 0; attempt < 40; attempt++)
         {
+            if (_servicePid != expectedPid) return;
             try
             {
                 var client = new TcpClient();
                 await client.ConnectAsync(IPAddress.Loopback, port);
+                if (_servicePid != expectedPid)
+                {
+                    client.Dispose();
+                    return;
+                }
                 client.NoDelay = true;
                 AttachManagement(client);
                 return;
@@ -322,27 +327,35 @@ public class VpnEngine
             }
         }
 
-        Log("Could not connect to the OpenVPN management interface");
-        ReadOpenVpnLogTail();
-        HandleProcessExit();
+        if (_servicePid == expectedPid)
+        {
+            Log("Could not connect to the OpenVPN management interface");
+            ReadOpenVpnLogTail();
+            HandleProcessExit();
+        }
     }
 
     private void AttachManagement(TcpClient client)
     {
         _mgmtClient = client;
         _mgmtStream = client.GetStream();
+        _mgmtCts?.Cancel();
         _mgmtCts = new CancellationTokenSource();
+        var cts = _mgmtCts;
 
         _ = Task.Run(async () =>
         {
             var reader = new StreamReader(_mgmtStream, Encoding.UTF8);
             try
             {
-                while (!_mgmtCts.Token.IsCancellationRequested)
+                while (!cts.Token.IsCancellationRequested)
                 {
-                    var line = await reader.ReadLineAsync(_mgmtCts.Token);
+                    var line = await reader.ReadLineAsync(cts.Token);
                     if (line == null) break;
-                    HandleManagementLine(line.TrimEnd('\r'));
+                    if (_mgmtClient == client)
+                    {
+                        HandleManagementLine(line.TrimEnd('\r'));
+                    }
                 }
             }
             catch { }
@@ -350,7 +363,6 @@ public class VpnEngine
             {
                 if (_mgmtClient == client)
                 {
-                    _mgmtClient = null;
                     HandleProcessExit();
                 }
             }
@@ -553,7 +565,12 @@ public class VpnEngine
             return;
         }
 
-        if (_mgmtClient == null && _servicePid == null)
+        _disconnectCts?.Cancel();
+        _disconnectCts = new CancellationTokenSource();
+        var token = _disconnectCts.Token;
+
+        var pidToStop = _servicePid;
+        if (_mgmtClient == null && !pidToStop.HasValue)
         {
             if (ProfileUuid != null) SetLevel(LEVEL_NOTCONNECTED, ProfileUuid);
             return;
@@ -562,38 +579,110 @@ public class VpnEngine
         if (ProfileUuid != null) Log("Disconnecting…");
         SendMgmt("signal SIGTERM");
 
-        Task.Delay(3000).ContinueWith(_ =>
+        // Set level to NOTCONNECTED immediately so UI and notifications reflect disconnect without lag
+        if (ProfileUuid != null)
         {
-            if (ProfileUuid != null && Level != LEVEL_NOTCONNECTED)
+            SetLevel(LEVEL_NOTCONNECTED, ProfileUuid);
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
             {
-                StopViaTaskkill();
-                SetLevel(LEVEL_NOTCONNECTED, ProfileUuid);
+                await Task.Delay(3000, token);
+                if (token.IsCancellationRequested) return;
+
+                if (pidToStop.HasValue)
+                {
+                    StopPid(pidToStop.Value);
+                }
+                if (_servicePid == pidToStop)
+                {
+                    HandleProcessExit();
+                }
             }
+            catch (OperationCanceledException) { }
         });
+    }
+
+    public async Task StopCurrentProcessAsync()
+    {
+        _disconnectCts?.Cancel();
+        _disconnectCts = null;
+
+        if (_pendingConnectTcs != null)
+        {
+            _pendingConnectTcs.TrySetCanceled();
+            _pendingConnectTcs = null;
+        }
+
+        var pid = _servicePid;
+        if (pid.HasValue)
+        {
+            try
+            {
+                var proc = Process.GetProcessById(pid.Value);
+                if (!proc.HasExited)
+                {
+                    SendMgmt("signal SIGTERM");
+                    using var cts = new CancellationTokenSource(1500);
+                    try
+                    {
+                        await proc.WaitForExitAsync(cts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        StopPid(pid.Value);
+                        using var killCts = new CancellationTokenSource(1000);
+                        try
+                        {
+                            await proc.WaitForExitAsync(killCts.Token);
+                        }
+                        catch (OperationCanceledException) { }
+                    }
+                }
+            }
+            catch (ArgumentException)
+            {
+                // Process already exited
+            }
+            catch (Exception ex)
+            {
+                Log($"Stop process warning: {ex.Message}");
+            }
+        }
+
+        HandleProcessExit();
     }
 
     public void ForceStop()
     {
+        _disconnectCts?.Cancel();
+        _disconnectCts = null;
         if (_pendingConnectTcs != null)
         {
             _pendingConnectTcs.TrySetCanceled();
             _pendingConnectTcs = null;
         }
         SendMgmt("signal SIGTERM");
-        StopViaTaskkill();
+        if (_servicePid.HasValue)
+        {
+            StopPid(_servicePid.Value);
+        }
+        HandleProcessExit();
     }
 
-    private void StopViaTaskkill()
+    private static void StopPid(int pid)
     {
-        if (!_servicePid.HasValue) return;
         try
         {
-            var psi = new ProcessStartInfo("taskkill.exe", $"/PID {_servicePid.Value} /T /F")
+            var psi = new ProcessStartInfo("taskkill.exe", $"/PID {pid} /T /F")
             {
                 CreateNoWindow = true,
                 UseShellExecute = false
             };
-            Process.Start(psi);
+            using var proc = Process.Start(psi);
+            proc?.WaitForExit(1000);
         }
         catch { }
     }
@@ -614,6 +703,8 @@ public class VpnEngine
 
     public void HandleProcessExit()
     {
+        _disconnectCts?.Cancel();
+        _disconnectCts = null;
         _mgmtCts?.Cancel();
         _mgmtClient?.Dispose();
         _mgmtClient = null;
@@ -628,6 +719,10 @@ public class VpnEngine
 
     public void SetLevel(string level, string? profileUuid)
     {
+        if (Level == level && (profileUuid == null || ProfileUuid == profileUuid))
+        {
+            return;
+        }
         Level = level;
         if (profileUuid != null) ProfileUuid = profileUuid;
         StateChanged?.Invoke(GetState());
@@ -643,6 +738,8 @@ public class VpnEngine
 
     public void Log(string message)
     {
+        if (!_store.GetSettings().DebugMode) return;
+
         var entry = new LogEntry
         {
             Time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
@@ -657,8 +754,17 @@ public class VpnEngine
         LogReceived?.Invoke(entry);
     }
 
+    public void ClearLog()
+    {
+        lock (_logLock)
+        {
+            _logBuffer.Clear();
+        }
+    }
+
     public List<LogEntry> GetLog()
     {
+        if (!_store.GetSettings().DebugMode) return [];
         lock (_logLock)
         {
             return new List<LogEntry>(_logBuffer);

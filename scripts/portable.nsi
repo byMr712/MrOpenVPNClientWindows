@@ -4,7 +4,7 @@
 Unicode True
 
 !define PRODUCT_NAME "MrOpenVPN Client"
-!define PRODUCT_VERSION "1.3.0"
+!define PRODUCT_VERSION "1.4.0"
 !define PRODUCT_EXE "MrOpenVPNClient.exe"
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION} Portable"

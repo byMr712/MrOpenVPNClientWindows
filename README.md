@@ -76,14 +76,14 @@ powershell -ExecutionPolicy Bypass -File scripts\build-native.ps1
 ```
 
 Результаты сборки сохраняются в папке `dist/`:
-- **`dist\MrOpenVPNClient-1.3.0-setup.exe`** — полноценный NSIS-установщик:
+- **`dist\MrOpenVPNClient-1.4.0-setup.exe`** — полноценный NSIS-установщик:
   - Выбор директории установки (по умолчанию `C:\Program Files\MrOpenVPNClientWindows`);
   - Опция «Создать ярлык на рабочий стол»;
   - Опция «Создать ярлык в меню пуск»;
   - Опция «Сразу установить службу (обязательно, но можно потом)»;
   - Запись в «Установку и удаление программ» Windows и чистый деинсталлятор.
-- **`dist\MrOpenVPNClient-1.3.0-portable.exe`** — сверхбыстрый одиночный исполняемый файл без установки (кэширует запуск в LocalAppData).
-- **`dist\MrOpenVPNClient-1.3.0-portable.zip`** — классический ZIP-архив с портативной папкой приложения.
+- **`dist\MrOpenVPNClient-1.4.0-portable.exe`** — сверхбыстрый одиночный исполняемый файл без установки (кэширует запуск в LocalAppData).
+- **`dist\MrOpenVPNClient-1.4.0-portable.zip`** — классический ZIP-архив с портативной папкой приложения.
 - **`dist-native\`** — исходный распакованный рабочий каталог приложения.
 
 ## Лицензии встроенных компонентов

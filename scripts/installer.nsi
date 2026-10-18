@@ -9,7 +9,7 @@
 Unicode True
 
 !define PRODUCT_NAME "MrOpenVPN Client"
-!define PRODUCT_VERSION "1.3.0"
+!define PRODUCT_VERSION "1.4.0"
 !define PRODUCT_PUBLISHER "Mr712"
 !define PRODUCT_WEB_SITE "https://github.com/byMr712/MrOpenVPNClientWindows"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\MrOpenVPNClient.exe"

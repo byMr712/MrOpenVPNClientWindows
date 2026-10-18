@@ -14,15 +14,6 @@ Stop-Process -Name "MrOpenVPNClient*", "setup*", "portable*" -Force -ErrorAction
 Write-Host "==> [1/4] Ensuring application icon..." -ForegroundColor Cyan
 & (Join-Path $rootDir "scripts\make-icon.ps1")
 
-Write-Host "==> [2/4] Finding Visual Studio MSBuild..." -ForegroundColor Cyan
-$msbuild = "C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe"
-if (-not (Test-Path $msbuild)) {
-    $found = Get-ChildItem "C:\Program Files\Microsoft Visual Studio" -Recurse -Filter "MSBuild.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($found) { $msbuild = $found.FullName }
-    else { throw "MSBuild.exe not found in Microsoft Visual Studio directory." }
-}
-Write-Host "Using MSBuild: $msbuild" -ForegroundColor Gray
-
 $outDir = Join-Path $rootDir "dist-native"
 if (Test-Path $outDir) {
     Get-ChildItem -Path $outDir -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
@@ -32,16 +23,8 @@ if (Test-Path $outDir) {
 
 Write-Host "==> [3/4] Building MrOpenVPN Client (Lightweight Native .NET + WebView2)..." -ForegroundColor Cyan
 $proj = Join-Path $rootDir "src-net\MrOpenVPNClient.csproj"
-$args = @(
-    $proj,
-    "-restore",
-    "-t:Publish",
-    "-p:Configuration=$Configuration",
-    "-p:PublishDir=$outDir\",
-    "-p:SelfContained=false"
-)
 
-& $msbuild $args
+& dotnet publish $proj -c $Configuration -o "$outDir\" -p:SelfContained=false
 if ($LASTEXITCODE -ne 0) {
     throw "Build failed with exit code $LASTEXITCODE"
 }
@@ -105,8 +88,10 @@ if (-not (Test-Path $distDir)) {
     New-Item -ItemType Directory -Path $distDir -Force | Out-Null
 }
 
+$version = "1.4.0"
+
 # Create portable ZIP archive
-$portableZip = Join-Path $distDir "MrOpenVPNClient-1.3.0-portable.zip"
+$portableZip = Join-Path $distDir "MrOpenVPNClient-$version-portable.zip"
 if (Test-Path $portableZip) { Remove-Item -Force $portableZip }
 Compress-Archive -Path (Join-Path $outDir "*") -DestinationPath $portableZip -Force
 
@@ -145,8 +130,8 @@ Write-Host "`n========================================================" -Foregro
 Write-Host "           BUILD COMPLETED SUCCESSFULLY!                " -ForegroundColor Green
 Write-Host "========================================================" -ForegroundColor Green
 
-$setupExe = Join-Path $distDir "MrOpenVPNClient-1.3.0-setup.exe"
-$portableExe = Join-Path $distDir "MrOpenVPNClient-1.3.0-portable.exe"
+$setupExe = Join-Path $distDir "MrOpenVPNClient-$version-setup.exe"
+$portableExe = Join-Path $distDir "MrOpenVPNClient-$version-portable.exe"
 
 if (Test-Path $setupExe) {
     $setupSize = [Math]::Round(((Get-Item $setupExe).Length / 1MB), 2)
