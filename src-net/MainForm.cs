@@ -49,8 +49,8 @@ public class MainForm : Form
         _engine = new VpnEngine(_store);
 
         Text = "MrOpenVPN Client For Windows";
-        Size = new Size(400, 740);
-        MinimumSize = new Size(360, 560);
+        Size = new Size(467, 740);
+        MinimumSize = new Size(420, 560);
         BackColor = Color.Black;
         ShowIcon = true;
 

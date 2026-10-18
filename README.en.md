@@ -99,8 +99,8 @@ All license files live in `licenses/`:
 
 ## How the app works
 
-- **Phone-like window**: fixed mobile content width of 400px, centered in a
-  resizable window (minimum 360×560).
+- **Phone-like window**: fixed mobile content width of 467px, centered in a
+  resizable window (minimum 420×560).
 - **Themes**: default black/white, neon, oled, paper, redline, mint + an accent
   color picker (presets or custom HEX).
 - **Animations**: pulsing outline of the status card and the selected profile
