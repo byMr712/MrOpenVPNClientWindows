@@ -24,8 +24,15 @@ public class MainForm : Form
     private static extern bool SetForegroundWindow(IntPtr hWnd);
 
     [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
     private static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
     private const int SW_RESTORE = 9;
+
+    [DllImport("user32.dll")]
+    private static extern bool ChangeWindowMessageFilter(uint message, uint dwFlag);
+    private const uint MSGFLT_ADD = 1;
 
     private readonly WebView2 _webView;
     private readonly VpnStore _store;
@@ -86,6 +93,12 @@ public class MainForm : Form
             int darkMode = 1;
             DwmSetWindowAttribute(Handle, 20, ref darkMode, sizeof(int));
         }
+
+        try
+        {
+            ChangeWindowMessageFilter(Program.WM_SHOW_MROPENVPN, MSGFLT_ADD);
+        }
+        catch { }
 
         // Initialize WebView2
         _webView = new WebView2
@@ -259,14 +272,21 @@ public class MainForm : Form
             return;
         }
 
-        Show();
+        if (!Visible)
+        {
+            Show();
+        }
+
         if (WindowState == FormWindowState.Minimized)
         {
             WindowState = FormWindowState.Normal;
         }
-        ShowWindowAsync(Handle, SW_RESTORE);
+
+        ShowWindow(Handle, SW_RESTORE);
         ShowInTaskbar = true;
         BringToFront();
+        TopMost = true;
+        TopMost = false;
         Activate();
         SetForegroundWindow(Handle);
     }

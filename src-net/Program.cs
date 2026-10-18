@@ -16,6 +16,16 @@ internal static class Program
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
+    [DllImport("user32.dll", EntryPoint = "FindWindow", SetLastError = true, CharSet = CharSet.Auto)]
+    private static extern IntPtr FindWindow(string? lpClassName, string lpWindowName);
+
+    [DllImport("user32.dll")]
+    private static extern bool AllowSetForegroundWindow(int dwProcessId);
+
+    private const int ASFW_ANY = -1;
+    public const string MainWindowTitle = "MrOpenVPN Client For Windows";
+    public const string ShowEventName = "Local\\MrOpenVPNClientWindows_ShowEvent";
+
     public const int HWND_BROADCAST = 0xffff;
     public static readonly uint WM_SHOW_MROPENVPN = RegisterWindowMessage("WM_SHOW_MROPENVPN_CLIENT_WINDOW");
 
@@ -35,18 +45,65 @@ internal static class Program
 
         if (!isNewInstance)
         {
-            // Already running - notify the active instance to restore from tray and bring to front
-            PostMessage((IntPtr)HWND_BROADCAST, WM_SHOW_MROPENVPN, IntPtr.Zero, IntPtr.Zero);
+            // Allow the running instance to take foreground focus
+            AllowSetForegroundWindow(ASFW_ANY);
+
+            // Signal named event to notify the active instance
+            try
+            {
+                using var ev = EventWaitHandle.OpenExisting(ShowEventName);
+                ev.Set();
+            }
+            catch { }
+
+            // Also post message directly to window handle if found
+            var hWnd = FindWindow(null, MainWindowTitle);
+            if (hWnd != IntPtr.Zero)
+            {
+                PostMessage(hWnd, WM_SHOW_MROPENVPN, IntPtr.Zero, IntPtr.Zero);
+            }
+            else
+            {
+                PostMessage((IntPtr)HWND_BROADCAST, WM_SHOW_MROPENVPN, IntPtr.Zero, IntPtr.Zero);
+            }
             return;
         }
+
+        EventWaitHandle? showEvent = null;
+        RegisteredWaitHandle? waitHandle = null;
+        try
+        {
+            showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
+        }
+        catch { }
 
         ApplicationConfiguration.Initialize();
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 
-        Application.Run(new MainForm());
+        var mainForm = new MainForm();
 
+        if (showEvent != null)
+        {
+            waitHandle = ThreadPool.RegisterWaitForSingleObject(
+                showEvent,
+                (state, timedOut) =>
+                {
+                    if (!timedOut && !mainForm.IsDisposed)
+                    {
+                        mainForm.RestoreAndShowWindow();
+                    }
+                },
+                null,
+                -1,
+                false);
+        }
+
+        Application.Run(mainForm);
+
+        waitHandle?.Unregister(null);
+        showEvent?.Dispose();
         GC.KeepAlive(_singleInstanceMutex);
     }
 }
